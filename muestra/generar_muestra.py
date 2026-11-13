@@ -4,9 +4,9 @@ src = sys.argv[1]; out = sys.argv[2]
 def body(path, key):
     s = open(path).read()
     s = s[s.index('</helmet>') + len('</helmet>'):s.index('</x-dc>')].strip()
-    s = s.replace('{{accent}}', 'var(--accent)')
+    s = s.replace('{{accent}}', 'var(--accent)').replace('{{needleColor}}', 'var(--needle)')
     # Atributos de presentación SVG con el color -> estilo (los atributos no aceptan var()).
-    s = re.sub(r'(stop-color|stroke|fill)="var\(--accent\)"', r'style="\1: var(--accent)"', s)
+    s = re.sub(r'(stop-color|stroke|fill)="(var\(--(?:accent|needle)\))"', r'style="\1: \2"', s)
     s = s.replace('{{speed}}', '<span class="spd">0</span>')
     s = s.replace('transform="{{needle}}"', 'class="needle"')
     s = s.replace('stroke-dasharray="{{arc}}"', 'class="arc"')
@@ -39,7 +39,7 @@ page = '''<!doctype html>
 @font-face{font-family:'Barlow Condensed';font-weight:500 600;src:url(fonts/barlowc-600.woff2) format('woff2')}
 @font-face{font-family:'Barlow Condensed';font-weight:700;src:url(fonts/barlowc-700.woff2) format('woff2')}
 html,body{margin:0;height:100%;background:#0B0E13;overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
-:root{--accent:#FF5A1F}
+:root{--accent:#FF5A1F;--needle:#FF1E1E}
 #stage{position:absolute;left:0;top:0;width:1024px;height:552px;transform-origin:0 0}
 .design{position:absolute;left:0;top:0}
 button{font-family:inherit;cursor:pointer}
@@ -47,7 +47,7 @@ button{font-family:inherit;cursor:pointer}
 #opt-btn{position:absolute;left:10px;top:8px;height:40px;padding:0 14px;border-radius:20px;border:1px solid #2A3240;background:rgba(21,26,34,.85);color:#A3ADBB;font:600 15px Barlow,sans-serif;z-index:5}
 #opts{position:absolute;inset:0;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;z-index:10;font-family:Barlow,sans-serif;color:#F2F4F7}
 #opts.on{display:flex}
-.card{width:640px;background:#151A22;border:1px solid #2A3240;border-radius:20px;padding:22px 24px;display:flex;flex-direction:column;gap:16px}
+.card{width:640px;background:#151A22;border:1px solid #2A3240;border-radius:20px;padding:18px 24px;display:flex;flex-direction:column;gap:11px}
 .card h2{margin:0;font-size:24px;font-weight:600}
 .row{display:flex;align-items:center;gap:12px}
 .row>.lbl{width:120px;font-size:18px;color:#A3ADBB}
@@ -79,6 +79,12 @@ input[type=range]{flex:1;height:44px;accent-color:var(--accent)}
       <button class="sw" data-c="#FF6A1A" style="background:#FF6A1A">3</button>
       <button class="sw" data-c="#FF8A1E" style="background:#FF8A1E">4</button>
       <span style="flex:1"></span></div>
+    <div class="row"><span class="lbl">Aguja</span>
+      <button class="sw" data-n="#FF1E1E" style="background:#FF1E1E;color:#000">1</button>
+      <button class="sw" data-n="#FF0000" style="background:#FF0000;color:#000">2</button>
+      <button class="sw" data-n="#FF0A3C" style="background:#FF0A3C;color:#000">3</button>
+      <button class="sw" data-n="#FF2E2E" style="background:#FF2E2E;color:#000">4</button>
+      <span style="flex:1"></span></div>
     <div class="row"><span class="lbl">Velocidad</span>
       <input id="spd" type="range" min="0" max="240" step="1" value="87"><span class="val" id="spdv">87</span></div>
     <div class="row"><span class="lbl"></span>
@@ -89,7 +95,7 @@ input[type=range]{flex:1;height:44px;accent-color:var(--accent)}
 </div>
 <script>
 (function(){
-  var st = {design:'banda', src:'music', color:'#FF5A1F', speed:87, sim:false};
+  var st = {design:'banda', src:'music', color:'#FF5A1F', needle:'#FF1E1E', speed:87, sim:false};
   try { var saved = JSON.parse(localStorage.getItem('muestra')||'null'); if (saved) for (var k in saved) st[k]=saved[k]; } catch(e) {}
   st.sim = false;
   var $ = function(q,r){return Array.prototype.slice.call((r||document).querySelectorAll(q));};
@@ -106,9 +112,10 @@ input[type=range]{flex:1;height:44px;accent-color:var(--accent)}
   }
   function render(){
     document.documentElement.style.setProperty('--accent', st.color);
+    document.documentElement.style.setProperty('--needle', st.needle);
     $('.design').forEach(function(d){d.style.display = d.id==='d-'+st.design ? 'flex' : 'none';});
-    $('.src-music').forEach(function(e){e.style.display = st.src==='music' ? 'flex' : 'none';});
-    $('.src-radio').forEach(function(e){e.style.display = st.src==='radio' ? 'flex' : 'none';});
+    $('.src-music').forEach(function(e){e.style.display = st.src==='music' ? 'block' : 'none';});
+    $('.src-radio').forEach(function(e){e.style.display = st.src==='radio' ? 'block' : 'none';});
     $('.dockbtn').forEach(function(b){
       var on = b.getAttribute('data-src')===st.src;
       b.style.cssText = 'flex: 1; height: 56px; border-radius: 14px; display: flex; align-items: center; justify-content: center; ' +
@@ -117,17 +124,17 @@ input[type=range]{flex:1;height:44px;accent-color:var(--accent)}
     $('[data-design]').forEach(function(b){b.classList.toggle('sel', b.getAttribute('data-design')===st.design);});
     $('[data-panel]').forEach(function(b){b.classList.toggle('sel', b.getAttribute('data-panel')===st.src);});
     $('[data-c]').forEach(function(b){b.classList.toggle('sel', b.getAttribute('data-c')===st.color);});
+    $('[data-n]').forEach(function(b){b.classList.toggle('sel', b.getAttribute('data-n')===st.needle);});
     document.getElementById('sim').classList.toggle('sel', st.sim);
     document.getElementById('spd').value = st.speed;
     setSpeed(st.speed);
     save();
   }
-  // Las secciones de música y radio son columnas flexibles como en el diseño.
-  $('.src-music,.src-radio').forEach(function(e){e.style.flexDirection='column';e.style.justifyContent='space-between';});
   $('.dockbtn').forEach(function(b){b.addEventListener('click',function(){st.src=b.getAttribute('data-src');render();});});
   $('[data-design]').forEach(function(b){b.addEventListener('click',function(){st.design=b.getAttribute('data-design');render();});});
   $('[data-panel]').forEach(function(b){b.addEventListener('click',function(){st.src=b.getAttribute('data-panel');render();});});
   $('[data-c]').forEach(function(b){b.addEventListener('click',function(){st.color=b.getAttribute('data-c');render();});});
+  $('[data-n]').forEach(function(b){b.addEventListener('click',function(){st.needle=b.getAttribute('data-n');render();});});
   document.getElementById('spd').addEventListener('input',function(e){st.sim=false;st.speed=+e.target.value;render();});
   document.getElementById('opt-btn').addEventListener('click',function(){document.getElementById('opts').classList.add('on');});
   document.getElementById('close').addEventListener('click',function(){document.getElementById('opts').classList.remove('on');});
