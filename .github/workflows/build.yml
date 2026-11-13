@@ -31,22 +31,36 @@ jobs:
       - name: Preparar Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Compilar la APK
+      - name: Descargar la letra Barlow para la muestra
+        run: |
+          mkdir -p muestra/src/main/assets/fonts
+          cd muestra/src/main/assets/fonts
+          B=https://cdn.jsdelivr.net/npm/@fontsource
+          for w in 400 500 600 700; do curl -fsSL -o barlow-$w.woff2 $B/barlow@5/files/barlow-latin-$w-normal.woff2 || true; done
+          for w in 600 700; do curl -fsSL -o barlowc-$w.woff2 $B/barlow-condensed@5/files/barlow-condensed-latin-$w-normal.woff2 || true; done
+          ls -l
+
+      - name: Compilar las APK
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug --stacktrace
           cp app/build/outputs/apk/debug/app-debug.apk Launcher.apk
+          cp muestra/build/outputs/apk/debug/muestra-debug.apk Muestra.apk
 
       - name: Guardar la APK en la ejecución
         uses: actions/upload-artifact@v4
         with:
           name: Launcher.apk
-          path: Launcher.apk
+          path: |
+            Launcher.apk
+            Muestra.apk
 
       - name: Publicar la APK como versión descargable
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
           name: Launcher ${{ github.run_number }}
-          files: Launcher.apk
+          files: |
+            Launcher.apk
+            Muestra.apk
           make_latest: true
