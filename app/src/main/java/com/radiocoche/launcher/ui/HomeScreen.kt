@@ -178,7 +178,7 @@ private fun MusicPanel(h: HomeState) {
                 )
                 Text(
                     if (hasSong) m.artist else "Toca para abrir Música",
-                    color = Color(0xFFDCE2EA), fontSize = 21.sp, fontFamily = Tema.body,
+                    color = p.muted, fontSize = 21.sp, fontFamily = Tema.body,
                     maxLines = 2, overflow = TextOverflow.Ellipsis,
                 )
                 if (m.album.isNotEmpty()) {
