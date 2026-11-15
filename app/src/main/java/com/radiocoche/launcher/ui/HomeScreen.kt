@@ -221,7 +221,8 @@ private fun RadioPanel(h: HomeState) {
     val p = Tema.p
     val r = h.radio
 
-    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
+    // Solo la emisora y su frecuencia; al tocar se abre la Radio.
+    Column(Modifier.fillMaxSize().tap { h.openRadio() }) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 r.bank.ifEmpty { "FM" },
@@ -232,92 +233,35 @@ private fun RadioPanel(h: HomeState) {
                     .padding(horizontal = 11.dp, vertical = 2.dp),
             )
             Spacer(Modifier.weight(1f))
-            if (r.pty.isNotEmpty()) {
-                Text(r.pty, color = p.muted, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, fontFamily = Tema.body)
-            }
+            Text("RADIO", color = p.muted, fontSize = 15.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp, fontFamily = Tema.body)
         }
-
-        Column(Modifier.fillMaxWidth().tap { h.openRadio() }, horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                r.name.ifEmpty { if (r.freq.isEmpty()) "Radio" else r.freq },
-                color = p.text, fontSize = 72.sp, lineHeight = 74.sp,
-                fontFamily = Tema.condensed, fontWeight = FontWeight.SemiBold,
-                maxLines = 1, overflow = TextOverflow.Ellipsis,
-            )
-            if (r.freq.isNotEmpty()) {
-                Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(
-                        r.freq, color = p.accent, fontSize = 32.sp, lineHeight = 35.sp,
-                        fontFamily = Tema.condensed, fontWeight = FontWeight.SemiBold,
-                    )
-                    Text(r.unit, color = p.muted, fontSize = 17.sp, fontFamily = Tema.body, modifier = Modifier.padding(bottom = 5.dp))
-                }
-            }
-            Text(
-                r.text.ifEmpty { if (r.freq.isEmpty()) "Toca para abrir la Radio" else " " },
-                color = p.muted, fontSize = 16.sp, fontFamily = Tema.body,
-                maxLines = 1, overflow = TextOverflow.Ellipsis,
-            )
-        }
-
-        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            val tick = p.track
-            val marker = NeedleRed
-            Canvas(Modifier.fillMaxWidth().height(27.dp)) {
-                val top = 3.dp.toPx()
-                val step = 11.dp.toPx()
-                var x = 0f
-                while (x <= size.width) {
-                    drawLine(tick, Offset(x, top), Offset(x, size.height), 1.dp.toPx())
-                    x += step
-                }
-                drawLine(tick, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx())
-                val w = 5.dp.toPx()
-                val mx = (size.width * r.pos).coerceIn(w, size.width - w) - w / 2
-                val rr = CornerRadius(3.dp.toPx())
-                drawRoundRect(marker, Offset(mx, 0f), Size(w, size.height), rr)
-                drawRoundRect(Color.Black, Offset(mx, 0f), Size(w, size.height), rr, style = Stroke(1.5.dp.toPx()))
-            }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                for (l in r.labels) Text(l, color = p.muted, fontSize = 13.sp, fontFamily = Tema.body)
-            }
-        }
-
-        val page = (r.preset.coerceAtLeast(0)) / 6
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-            for (i in page * 6 until page * 6 + 6) {
-                val f = r.presetFreqs.getOrNull(i).orEmpty()
-                val n = r.presetNames.getOrNull(i).orEmpty()
-                val active = i == r.preset && f.isNotEmpty()
-                CarButton(
-                    Modifier.weight(1f).height(50.dp),
-                    bg = if (active) p.accentBg else p.raised,
-                    border = if (active) p.accent else p.border2,
-                    borderWidth = if (active) 2.dp else 1.dp,
-                    radius = 10.dp,
-                    onClick = { if (f.isNotEmpty()) h.radioPreset(i) else h.openRadio() },
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("P${i + 1}", color = if (active) p.accent else p.muted, fontSize = 11.sp, lineHeight = 13.sp, fontFamily = Tema.body)
+        Column(
+            Modifier.weight(1f).fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            if (r.freq.isEmpty()) {
+                Text("Radio", color = p.text, fontSize = 84.sp, lineHeight = 88.sp, fontFamily = Tema.condensed, fontWeight = FontWeight.SemiBold)
+                Text("Toca para abrir la Radio", color = p.muted, fontSize = 20.sp, fontFamily = Tema.body)
+            } else {
+                Text(
+                    r.name.ifEmpty { r.freq },
+                    color = p.text, fontSize = 96.sp, lineHeight = 100.sp,
+                    fontFamily = Tema.condensed, fontWeight = FontWeight.SemiBold,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+                )
+                if (r.name.isNotEmpty()) {
+                    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
-                            n.ifEmpty { f.ifEmpty { "—" } },
-                            color = if (active) p.accent else if (f.isEmpty()) p.dim else p.text,
-                            fontSize = 15.sp, lineHeight = 18.sp, fontFamily = Tema.body,
-                            fontWeight = if (active) FontWeight.Bold else FontWeight.SemiBold,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.padding(horizontal = 3.dp),
+                            r.freq, color = p.accent, fontSize = 48.sp, lineHeight = 52.sp,
+                            fontFamily = Tema.condensed, fontWeight = FontWeight.SemiBold,
                         )
+                        Text(r.unit, color = p.muted, fontSize = 22.sp, fontFamily = Tema.body, modifier = Modifier.padding(bottom = 7.dp))
                     }
+                } else {
+                    Text(r.unit, color = p.accent, fontSize = 28.sp, fontFamily = Tema.body)
                 }
             }
-        }
-
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            RectButton(Modifier.weight(1f), "Presintonía anterior", Ic.Prev) { h.radioPrevious() }
-            CarButton(Modifier.weight(1.3f).height(58.dp), bg = p.raised, border = p.border2, radius = 14.dp, onClick = { h.openRadio() }) {
-                Text("Abrir Radio", color = p.text, fontSize = 19.sp, fontWeight = FontWeight.SemiBold, fontFamily = Tema.body)
-            }
-            RectButton(Modifier.weight(1f), "Presintonía siguiente", Ic.Next) { h.radioNext() }
         }
     }
 }
@@ -356,16 +300,19 @@ private fun RowScope.DockButton(
     onClick: () -> Unit,
 ) {
     val p = Tema.p
-    CarButton(
-        Modifier.weight(1f).height(56.dp),
-        bg = if (active) p.panel else p.raised,
-        border = if (active) p.accent else p.border2,
-        borderWidth = if (active) 2.dp else 1.dp,
-        radius = 14.dp,
-        onLongClick = onLongClick,
-        onClick = onClick,
-    ) {
-        CarIcon(icon, 28.dp, if (active) p.accent else p.muted, description)
+    // Botón redondo centrado en su hueco: los seis quedan repartidos a lo ancho de la barra.
+    Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+        CarButton(
+            Modifier.size(58.dp),
+            bg = if (active) p.panel else p.raised,
+            border = if (active) p.accent else p.border2,
+            borderWidth = if (active) 2.dp else 1.dp,
+            radius = 29.dp,
+            onLongClick = onLongClick,
+            onClick = onClick,
+        ) {
+            CarIcon(icon, 28.dp, if (active) p.accent else p.muted, description)
+        }
     }
 }
 
