@@ -14,6 +14,7 @@ import androidx.core.content.ContextCompat
  *
  * La Radio envía su estado con el aviso [STATE] cada vez que cambia y obedece las
  * órdenes del aviso [CMD] ("query", "prev", "next", "preset" + "index").
+ * Desde la Radio 0.14 responde aunque la app esté cerrada (la radio sigue sonando).
  */
 class RadioLink(private val ctx: Context) {
 
@@ -29,6 +30,8 @@ class RadioLink(private val ctx: Context) {
     var name by mutableStateOf("")
         private set
     var text by mutableStateOf("")
+        private set
+    var pty by mutableStateOf("")
         private set
     var pos by mutableStateOf(0.5f)
         private set
@@ -55,6 +58,7 @@ class RadioLink(private val ctx: Context) {
             unit = i.getStringExtra("unit") ?: "MHz"
             name = i.getStringExtra("name") ?: ""
             text = i.getStringExtra("text") ?: ""
+            pty = i.getStringExtra("pty") ?: ""
             pos = i.getFloatExtra("pos", 0.5f)
             i.getStringArrayExtra("labels")?.let { labels = it.toList() }
             preset = i.getIntExtra("preset", -1)
@@ -62,7 +66,7 @@ class RadioLink(private val ctx: Context) {
             presetNames = i.getStringArrayExtra("pName")?.toList() ?: emptyList()
             prefs.edit()
                 .putString("bank", bank).putString("freq", freq).putString("unit", unit)
-                .putString("name", name).putFloat("pos", pos)
+                .putString("name", name).putFloat("pos", pos).putString("text", text).putString("pty", pty)
                 .apply()
             if (i.getBooleanExtra("front", false)) onRadioFront?.invoke()
         }
@@ -74,6 +78,8 @@ class RadioLink(private val ctx: Context) {
         freq = prefs.getString("freq", "") ?: ""
         unit = prefs.getString("unit", "MHz") ?: "MHz"
         name = prefs.getString("name", "") ?: ""
+        text = prefs.getString("text", "") ?: ""
+        pty = prefs.getString("pty", "") ?: ""
         pos = prefs.getFloat("pos", 0.5f)
     }
 

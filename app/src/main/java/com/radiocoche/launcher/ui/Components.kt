@@ -27,13 +27,13 @@ import androidx.compose.ui.unit.dp
 import kotlin.math.min
 
 /**
- * El diseño está hecho para 1024×600. Aquí se escala entero para que quepa
+ * El diseño está hecho para 1024×552 (lo que queda bajo la barra de Android). Aquí se escala entero para que quepa
  * en el espacio que deje la barra del sistema, sin deformarse.
  */
 @Composable
 fun ScaledRoot(content: @Composable () -> Unit) {
     BoxWithConstraints(Modifier.fillMaxSize().background(Tema.p.bg)) {
-        val scale = min(maxWidth.value / 1024f, maxHeight.value / 600f)
+        val scale = min(maxWidth.value / 1024f, maxHeight.value / 552f)
         val d = LocalDensity.current
         CompositionLocalProvider(LocalDensity provides Density(d.density * scale, 1f)) {
             content()

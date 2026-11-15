@@ -132,7 +132,10 @@ class HomeState(private val ctx: Context) {
     fun musicNext() { if (!music.next()) openMusic() }
     fun musicPrevious() { if (!music.previous()) openMusic() }
 
-    fun radioNext() { if (radio.alive) radio.next() else openRadio() }
-    fun radioPrevious() { if (radio.alive) radio.previous() else openRadio() }
-    fun radioPreset(i: Int) { if (radio.alive) radio.selectPreset(i) else openRadio() }
+    // La Radio (0.14 o posterior) atiende las órdenes aunque esté cerrada, así que se le mandan siempre.
+    private fun radioInstalled() = ctx.packageManager.getLaunchIntentForPackage(Pkg.RADIO) != null
+
+    fun radioNext() { if (radioInstalled()) radio.next() else openRadio() }
+    fun radioPrevious() { if (radioInstalled()) radio.previous() else openRadio() }
+    fun radioPreset(i: Int) { if (radioInstalled()) radio.selectPreset(i) else openRadio() }
 }

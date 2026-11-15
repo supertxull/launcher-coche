@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -39,6 +40,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -68,38 +70,35 @@ fun HomeScreen(h: HomeState) {
     }
 
     Box(Modifier.fillMaxSize().background(p.bg)) {
-        Column(
-            Modifier.fillMaxSize().padding(start = 28.dp, end = 28.dp, top = 20.dp, bottom = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+        Row(
+            Modifier.fillMaxSize().padding(start = 16.dp, end = 20.dp, top = 16.dp, bottom = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            Row(
-                Modifier.weight(1f).fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(32.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                SpeedAndClock(h, Modifier.width(380.dp))
+            SpeedAndClock(h, Modifier.width(430.dp).fillMaxHeight())
+            Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(
                     Modifier
                         .weight(1f)
-                        .height(440.dp)
+                        .fillMaxWidth()
                         .clip(RoundedCornerShape(20.dp))
                         .background(p.panel)
-                        .border(1.dp, p.border, RoundedCornerShape(20.dp)),
+                        .border(1.dp, p.border, RoundedCornerShape(20.dp))
+                        .padding(horizontal = 22.dp, vertical = 20.dp),
                 ) {
                     if (h.source == Source.RADIO) RadioPanel(h) else MusicPanel(h)
                 }
+                Dock(h)
             }
-            Dock(h, Modifier.align(Alignment.CenterHorizontally))
         }
 
         if (!h.isDefaultHome) {
             CarButton(
-                Modifier.align(Alignment.TopCenter).padding(top = 8.dp).height(48.dp),
-                bg = p.accent, radius = 24.dp, onClick = { h.openHomeChooser() },
+                Modifier.align(Alignment.TopCenter).padding(top = 6.dp).height(46.dp),
+                bg = p.panel, border = p.accent, borderWidth = 2.dp, radius = 23.dp, onClick = { h.openHomeChooser() },
             ) {
                 Text(
                     "Poner como pantalla de inicio",
-                    color = p.onAccent, fontSize = 18.sp, fontWeight = FontWeight.SemiBold,
+                    color = p.accent, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, fontFamily = Tema.body,
                     modifier = Modifier.padding(horizontal = 22.dp),
                 )
             }
@@ -119,17 +118,17 @@ private fun SpeedAndClock(h: HomeState, modifier: Modifier) {
         modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
         // La hora monta un poco sobre la parte baja del velocímetro, como en el diseño.
-        verticalArrangement = Arrangement.spacedBy((-36).dp),
+        verticalArrangement = Arrangement.spacedBy((-44).dp, Alignment.CenterVertically),
     ) {
-        Speedometer(h.speed.kmh, Modifier.size(350.dp))
+        Speedometer(h.speed.kmh, Modifier.size(410.dp))
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 h.time,
-                color = p.text, fontSize = 84.sp, lineHeight = 84.sp,
+                color = p.text, fontSize = 96.sp, lineHeight = 96.sp,
                 fontFamily = Tema.condensed, fontWeight = FontWeight.SemiBold,
-                style = TextStyle(shadow = Shadow(Color(0xB3000000), Offset(0f, 2f), 12f)),
+                style = TextStyle(shadow = Shadow(Color(0xCC000000), Offset(0f, 2f), 12f)),
             )
-            Text(h.date, color = p.muted, fontSize = 20.sp)
+            Text(h.date, color = p.muted, fontSize = 24.sp, fontFamily = Tema.body)
         }
     }
 }
@@ -142,23 +141,23 @@ private fun MusicPanel(h: HomeState) {
     val m = h.music
     val hasSong = m.title.isNotEmpty()
 
-    Column(Modifier.fillMaxSize().padding(28.dp), verticalArrangement = Arrangement.SpaceBetween) {
+    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 if (m.playing) "REPRODUCIENDO" else "MÚSICA",
-                color = p.accent, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 2.sp,
-                modifier = Modifier.weight(1f),
+                color = p.accent, fontSize = 15.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp,
+                fontFamily = Tema.body, modifier = Modifier.weight(1f),
             )
         }
 
         Row(
             Modifier.fillMaxWidth().tap { h.openMusic() },
-            horizontalArrangement = Arrangement.spacedBy(24.dp),
+            horizontalArrangement = Arrangement.spacedBy(20.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 Modifier
-                    .size(170.dp)
+                    .size(210.dp)
                     .clip(RoundedCornerShape(14.dp))
                     .background(p.raised)
                     .border(1.dp, p.border2, RoundedCornerShape(14.dp)),
@@ -168,46 +167,44 @@ private fun MusicPanel(h: HomeState) {
                 if (art != null) {
                     Image(art, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                 } else {
-                    CarIcon(Ic.Note, 64.dp, p.accent)
+                    CarIcon(Ic.Note, 72.dp, p.accent)
                 }
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
                     if (hasSong) m.title else "Nada sonando",
-                    color = p.text, fontSize = 30.sp, lineHeight = 35.sp, fontWeight = FontWeight.SemiBold,
-                    maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    color = p.text, fontSize = 28.sp, lineHeight = 32.sp, fontWeight = FontWeight.SemiBold,
+                    fontFamily = Tema.body, maxLines = 3, overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     if (hasSong) m.artist else "Toca para abrir Música",
-                    color = p.muted, fontSize = 21.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    color = Color(0xFFDCE2EA), fontSize = 21.sp, fontFamily = Tema.body,
+                    maxLines = 2, overflow = TextOverflow.Ellipsis,
                 )
                 if (m.album.isNotEmpty()) {
-                    Text(m.album, color = p.dim, fontSize = 18.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(m.album, color = p.muted, fontSize = 18.sp, fontFamily = Tema.body, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
 
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             val fraction = if (m.durationMs > 0) (m.positionMs.toFloat() / m.durationMs).coerceIn(0f, 1f) else 0f
             Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(p.track)) {
                 Box(Modifier.fillMaxWidth(fraction).fillMaxHeight().background(p.accent))
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(clock(m.positionMs), color = p.muted, fontSize = 18.sp)
-                Text(clock(m.durationMs), color = p.muted, fontSize = 18.sp)
+                Text(clock(m.positionMs), color = p.muted, fontSize = 17.sp, fontFamily = Tema.body)
+                Text(clock(m.durationMs), color = p.muted, fontSize = 17.sp, fontFamily = Tema.body)
             }
         }
 
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(40.dp, Alignment.CenterHorizontally),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            RoundButton(Ic.Prev, "Anterior", 64.dp, 28.dp) { h.musicPrevious() }
-            CarButton(Modifier.size(84.dp), bg = p.accent, radius = 42.dp, onClick = { h.musicPlayPause() }) {
-                CarIcon(if (m.playing) Ic.Pause else Ic.Play, 36.dp, p.onAccent, if (m.playing) "Pausa" else "Reproducir")
-            }
-            RoundButton(Ic.Next, "Siguiente", 64.dp, 28.dp) { h.musicNext() }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            RectButton(Modifier.weight(1f), "Anterior", Ic.Prev) { h.musicPrevious() }
+            RectButton(
+                Modifier.weight(1.3f), if (m.playing) "Pausa" else "Reproducir",
+                if (m.playing) Ic.Pause else Ic.Play, active = true, iconSize = 30.dp,
+            ) { h.musicPlayPause() }
+            RectButton(Modifier.weight(1f), "Siguiente", Ic.Next) { h.musicNext() }
         }
     }
 }
@@ -224,84 +221,76 @@ private fun RadioPanel(h: HomeState) {
     val p = Tema.p
     val r = h.radio
 
-    Column(Modifier.fillMaxSize().padding(horizontal = 28.dp, vertical = 24.dp), verticalArrangement = Arrangement.SpaceBetween) {
+    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(
-                r.bank.ifEmpty { "RADIO" },
-                color = p.onAccent, fontSize = 17.sp, fontWeight = FontWeight.Bold,
-                modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(p.accent).padding(horizontal = 14.dp, vertical = 4.dp),
+                r.bank.ifEmpty { "FM" },
+                color = p.accent, fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = Tema.body,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .border(2.dp, p.accent, RoundedCornerShape(8.dp))
+                    .padding(horizontal = 11.dp, vertical = 2.dp),
             )
             Spacer(Modifier.weight(1f))
-            Text("RADIO", color = p.muted, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 2.sp)
+            if (r.pty.isNotEmpty()) {
+                Text(r.pty, color = p.muted, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, fontFamily = Tema.body)
+            }
         }
 
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            RoundButton(Ic.Prev, "Presintonía anterior", 60.dp, 28.dp) { h.radioPrevious() }
-            Column(
-                Modifier.weight(1f).tap { h.openRadio() },
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                if (r.freq.isEmpty()) {
-                    Text("Radio", color = p.accent, fontSize = 72.sp, lineHeight = 80.sp, fontFamily = Tema.condensed)
-                    Text("Toca para abrir la Radio", color = p.muted, fontSize = 20.sp)
-                } else {
-                    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text(
-                            r.freq, color = p.accent, fontSize = 92.sp, lineHeight = 92.sp,
-                            fontFamily = Tema.condensed, fontWeight = FontWeight.SemiBold, maxLines = 1,
-                        )
-                        Text(r.unit, color = p.muted, fontSize = 22.sp, modifier = Modifier.padding(bottom = 16.dp))
-                    }
+        Column(Modifier.fillMaxWidth().tap { h.openRadio() }, horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                r.name.ifEmpty { if (r.freq.isEmpty()) "Radio" else r.freq },
+                color = p.text, fontSize = 72.sp, lineHeight = 74.sp,
+                fontFamily = Tema.condensed, fontWeight = FontWeight.SemiBold,
+                maxLines = 1, overflow = TextOverflow.Ellipsis,
+            )
+            if (r.freq.isNotEmpty()) {
+                Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
-                        r.name.ifEmpty { if (r.alive) " " else "Toca para abrir la Radio" },
-                        color = if (r.name.isEmpty()) p.muted else p.text,
-                        fontSize = if (r.name.isEmpty()) 20.sp else 28.sp,
-                        fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        r.freq, color = p.accent, fontSize = 32.sp, lineHeight = 35.sp,
+                        fontFamily = Tema.condensed, fontWeight = FontWeight.SemiBold,
                     )
-                    Text(
-                        r.text.ifEmpty { " " }, color = p.muted, fontSize = 17.sp,
-                        maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    )
+                    Text(r.unit, color = p.muted, fontSize = 17.sp, fontFamily = Tema.body, modifier = Modifier.padding(bottom = 5.dp))
                 }
             }
-            RoundButton(Ic.Next, "Presintonía siguiente", 60.dp, 28.dp) { h.radioNext() }
+            Text(
+                r.text.ifEmpty { if (r.freq.isEmpty()) "Toca para abrir la Radio" else " " },
+                color = p.muted, fontSize = 16.sp, fontFamily = Tema.body,
+                maxLines = 1, overflow = TextOverflow.Ellipsis,
+            )
         }
 
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
             val tick = p.track
-            Canvas(Modifier.fillMaxWidth().height(30.dp)) {
-                val step = 12.dp.toPx()
+            val marker = NeedleRed
+            Canvas(Modifier.fillMaxWidth().height(27.dp)) {
+                val top = 3.dp.toPx()
+                val step = 11.dp.toPx()
                 var x = 0f
                 while (x <= size.width) {
-                    drawLine(tick, Offset(x, 4.dp.toPx()), Offset(x, size.height), 1.dp.toPx())
+                    drawLine(tick, Offset(x, top), Offset(x, size.height), 1.dp.toPx())
                     x += step
                 }
                 drawLine(tick, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx())
-                val mx = (size.width * r.pos).coerceIn(2.dp.toPx(), size.width - 2.dp.toPx())
-                drawRoundRect(
-                    NeedleRed.copy(alpha = 0.28f),
-                    Offset(mx - 5.dp.toPx(), 0f), Size(10.dp.toPx(), size.height),
-                    CornerRadius(5.dp.toPx()),
-                )
-                drawRoundRect(
-                    NeedleRed,
-                    Offset(mx - 2.dp.toPx(), 0f), Size(4.dp.toPx(), size.height),
-                    CornerRadius(2.dp.toPx()),
-                )
+                val w = 5.dp.toPx()
+                val mx = (size.width * r.pos).coerceIn(w, size.width - w) - w / 2
+                val rr = CornerRadius(3.dp.toPx())
+                drawRoundRect(marker, Offset(mx, 0f), Size(w, size.height), rr)
+                drawRoundRect(Color.Black, Offset(mx, 0f), Size(w, size.height), rr, style = Stroke(1.5.dp.toPx()))
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                for (l in r.labels) Text(l, color = p.muted, fontSize = 14.sp)
+                for (l in r.labels) Text(l, color = p.muted, fontSize = 13.sp, fontFamily = Tema.body)
             }
         }
 
         val page = (r.preset.coerceAtLeast(0)) / 6
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
             for (i in page * 6 until page * 6 + 6) {
                 val f = r.presetFreqs.getOrNull(i).orEmpty()
                 val n = r.presetNames.getOrNull(i).orEmpty()
                 val active = i == r.preset && f.isNotEmpty()
                 CarButton(
-                    Modifier.weight(1f).height(56.dp),
+                    Modifier.weight(1f).height(50.dp),
                     bg = if (active) p.accentBg else p.raised,
                     border = if (active) p.accent else p.border2,
                     borderWidth = if (active) 2.dp else 1.dp,
@@ -309,18 +298,26 @@ private fun RadioPanel(h: HomeState) {
                     onClick = { if (f.isNotEmpty()) h.radioPreset(i) else h.openRadio() },
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("P${i + 1}", color = if (active) p.accent else p.dim, fontSize = 12.sp, lineHeight = 14.sp)
+                        Text("P${i + 1}", color = if (active) p.accent else p.muted, fontSize = 11.sp, lineHeight = 13.sp, fontFamily = Tema.body)
                         Text(
                             n.ifEmpty { f.ifEmpty { "—" } },
                             color = if (active) p.accent else if (f.isEmpty()) p.dim else p.text,
-                            fontSize = 16.sp, lineHeight = 19.sp,
+                            fontSize = 15.sp, lineHeight = 18.sp, fontFamily = Tema.body,
                             fontWeight = if (active) FontWeight.Bold else FontWeight.SemiBold,
                             maxLines = 1, overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.padding(horizontal = 4.dp),
+                            modifier = Modifier.padding(horizontal = 3.dp),
                         )
                     }
                 }
             }
+        }
+
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            RectButton(Modifier.weight(1f), "Presintonía anterior", Ic.Prev) { h.radioPrevious() }
+            CarButton(Modifier.weight(1.3f).height(58.dp), bg = p.raised, border = p.border2, radius = 14.dp, onClick = { h.openRadio() }) {
+                Text("Abrir Radio", color = p.text, fontSize = 19.sp, fontWeight = FontWeight.SemiBold, fontFamily = Tema.body)
+            }
+            RectButton(Modifier.weight(1f), "Presintonía siguiente", Ic.Next) { h.radioNext() }
         }
     }
 }
@@ -328,16 +325,17 @@ private fun RadioPanel(h: HomeState) {
 // ------------------------------------------------------------------ barra inferior
 
 @Composable
-private fun Dock(h: HomeState, modifier: Modifier) {
+private fun Dock(h: HomeState) {
     val p = Tema.p
     Row(
-        modifier
-            .height(80.dp)
-            .clip(RoundedCornerShape(40.dp))
+        Modifier
+            .fillMaxWidth()
+            .height(72.dp)
+            .clip(RoundedCornerShape(18.dp))
             .background(p.panel)
-            .border(1.dp, p.border, RoundedCornerShape(40.dp))
-            .padding(horizontal = 22.dp),
-        horizontalArrangement = Arrangement.spacedBy(18.dp),
+            .border(1.dp, p.border, RoundedCornerShape(18.dp))
+            .padding(horizontal = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         DockButton(Ic.Radio, "Radio", active = h.source == Source.RADIO) { h.openRadio() }
@@ -350,7 +348,7 @@ private fun Dock(h: HomeState, modifier: Modifier) {
 }
 
 @Composable
-private fun DockButton(
+private fun RowScope.DockButton(
     icon: ImageVector,
     description: String,
     active: Boolean = false,
@@ -359,14 +357,38 @@ private fun DockButton(
 ) {
     val p = Tema.p
     CarButton(
-        Modifier.size(60.dp),
-        bg = if (active) p.accent else p.raised,
-        border = if (active) null else p.border2,
-        radius = 30.dp,
+        Modifier.weight(1f).height(56.dp),
+        bg = if (active) p.panel else p.raised,
+        border = if (active) p.accent else p.border2,
+        borderWidth = if (active) 2.dp else 1.dp,
+        radius = 14.dp,
         onLongClick = onLongClick,
         onClick = onClick,
     ) {
-        CarIcon(icon, 28.dp, if (active) p.onAccent else p.muted, description)
+        CarIcon(icon, 28.dp, if (active) p.accent else p.muted, description)
+    }
+}
+
+/** Botón rectangular del reproductor y de la radio (el activo, con borde naranja). */
+@Composable
+private fun RectButton(
+    modifier: Modifier,
+    description: String,
+    icon: ImageVector,
+    active: Boolean = false,
+    iconSize: androidx.compose.ui.unit.Dp = 28.dp,
+    onClick: () -> Unit,
+) {
+    val p = Tema.p
+    CarButton(
+        modifier.height(58.dp),
+        bg = if (active) p.panel else p.raised,
+        border = if (active) p.accent else p.border2,
+        borderWidth = if (active) 2.dp else 1.dp,
+        radius = 14.dp,
+        onClick = onClick,
+    ) {
+        CarIcon(icon, iconSize, if (active) p.accent else p.text, description)
     }
 }
 
@@ -398,7 +420,7 @@ private fun AppsOverlay(h: HomeState) {
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             RoundButton(Ic.Back, "Volver", 56.dp, 28.dp) { h.showApps = false }
-            Text("Aplicaciones", color = p.text, fontSize = 28.sp, fontWeight = FontWeight.SemiBold)
+            Text("Aplicaciones", color = p.text, fontSize = 28.sp, fontWeight = FontWeight.SemiBold, fontFamily = Tema.body)
         }
         val list = apps
         if (list == null) {

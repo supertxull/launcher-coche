@@ -1,42 +1,19 @@
 package com.radiocoche.launcher
 
 import android.Manifest
-import android.content.BroadcastReceiver
-import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.ContextCompat
-import com.radiocoche.launcher.ui.DayNight
 import com.radiocoche.launcher.ui.HomeScreen
 import com.radiocoche.launcher.ui.ScaledRoot
+import com.radiocoche.launcher.ui.Tema
 
 class MainActivity : ComponentActivity() {
 
     private lateinit var home: HomeState
-    private val mainHandler = Handler(Looper.getMainLooper())
-
-    /** Al encender o apagar las luces, la unidad avisa y cambiamos los colores. */
-    private val dayNightReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            DayNight.apply()
-            mainHandler.postDelayed({ DayNight.apply() }, 500)
-        }
-    }
-
-    /** Mira el modo día/noche cada pocos segundos mientras se ve la pantalla. */
-    private val dayNightPoll = object : Runnable {
-        override fun run() {
-            DayNight.apply()
-            mainHandler.postDelayed(this, DayNight.POLL_MS)
-        }
-    }
 
     private val askLocation = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         home.speed.start()
@@ -44,10 +21,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        DayNight.apply()
+        Tema.loadFonts(applicationContext)
         home = HomeState(applicationContext)
-
-        ContextCompat.registerReceiver(this, dayNightReceiver, IntentFilter(DayNight.ACTION), ContextCompat.RECEIVER_EXPORTED)
         home.radio.start()
 
         setContent {
@@ -71,20 +46,15 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        mainHandler.removeCallbacks(dayNightPoll)
-        dayNightPoll.run()
         home.onResume()
     }
 
     override fun onPause() {
-        mainHandler.removeCallbacks(dayNightPoll)
         home.onPause()
         super.onPause()
     }
 
     override fun onDestroy() {
-        mainHandler.removeCallbacksAndMessages(null)
-        runCatching { unregisterReceiver(dayNightReceiver) }
         home.radio.stop()
         home.music.release()
         super.onDestroy()

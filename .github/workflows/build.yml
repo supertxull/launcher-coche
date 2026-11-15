@@ -31,13 +31,19 @@ jobs:
       - name: Preparar Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Descargar la letra Barlow para la muestra
+      - name: Descargar la letra Barlow (licencia OFL)
         run: |
-          mkdir -p muestra/src/main/assets/fonts
+          mkdir -p muestra/src/main/assets/fonts app/src/main/assets/fonts
           cd muestra/src/main/assets/fonts
           B=https://cdn.jsdelivr.net/npm/@fontsource
           for w in 400 500 600 700; do curl -fsSL -o barlow-$w.woff2 $B/barlow@5/files/barlow-latin-$w-normal.woff2 || true; done
           for w in 600 700; do curl -fsSL -o barlowc-$w.woff2 $B/barlow-condensed@5/files/barlow-condensed-latin-$w-normal.woff2 || true; done
+          cd ../../../../../app/src/main/assets/fonts
+          G=https://raw.githubusercontent.com/google/fonts/main/ofl
+          for f in barlow/Barlow-Regular barlow/Barlow-Medium barlow/Barlow-SemiBold barlow/Barlow-Bold barlowcondensed/BarlowCondensed-SemiBold barlowcondensed/BarlowCondensed-Bold; do
+            curl -fsSL -o $(basename $f).ttf $G/$f.ttf || true
+          done
+          curl -fsSL -o OFL.txt $G/barlow/OFL.txt || true
           ls -l
 
       - name: Compilar las APK
