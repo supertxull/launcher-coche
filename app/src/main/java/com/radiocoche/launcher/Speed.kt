@@ -26,12 +26,17 @@ class Speed(private val ctx: Context) {
     var hasFix by mutableStateOf(false)
         private set
 
+    /** Última posición recibida (para guardar un radar). */
+    var last: Location? = null
+        private set
+
     private var lastFix = 0L
     private var running = false
 
     private val listener = object : LocationListener {
         override fun onLocationChanged(location: Location) {
             lastFix = SystemClock.elapsedRealtime()
+            last = location
             hasFix = true
             val v = if (location.hasSpeed()) location.speed * 3.6f else 0f
             // Parado, el GPS baila entre 0 y 2 km/h: se deja en 0.

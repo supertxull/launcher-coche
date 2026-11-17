@@ -54,6 +54,7 @@ import com.radiocoche.launcher.AppEntry
 import com.radiocoche.launcher.Apps
 import com.radiocoche.launcher.HomeState
 import com.radiocoche.launcher.Source
+import com.radiocoche.launcher.radar.RadarState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -104,8 +105,25 @@ fun HomeScreen(h: HomeState) {
             }
         }
 
+        if (h.isDefaultHome && !h.canOverlay) {
+            CarButton(
+                Modifier.align(Alignment.TopCenter).padding(top = 6.dp).height(46.dp),
+                bg = p.panel, border = p.accent, borderWidth = 2.dp, radius = 23.dp, onClick = { h.openOverlaySettings() },
+            ) {
+                Text(
+                    "Permitir avisos de radar sobre otras apps",
+                    color = p.accent, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, fontFamily = Tema.body,
+                    modifier = Modifier.padding(horizontal = 22.dp),
+                )
+            }
+        }
+
         if (h.showApps) AppsOverlay(h)
         if (h.showNavChooser) NavChooser(h)
+        if (h.showRadars) RadarDialog(h)
+        // Destello dentro del launcher cuando no hay permiso para pintarlo sobre las demás apps.
+        val flashAlert = RadarState.alert
+        if (RadarState.flash && !RadarState.overlayActive && flashAlert != null) RadarFlash(flashAlert)
     }
 }
 
@@ -120,15 +138,26 @@ private fun SpeedAndClock(h: HomeState, modifier: Modifier) {
         // La hora monta un poco sobre la parte baja del velocímetro, como en el diseño.
         verticalArrangement = Arrangement.spacedBy((-44).dp, Alignment.CenterVertically),
     ) {
-        Speedometer(h.speed.kmh, Modifier.size(410.dp))
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                h.time,
-                color = p.text, fontSize = 96.sp, lineHeight = 96.sp,
-                fontFamily = Tema.condensed, fontWeight = FontWeight.SemiBold,
-                style = TextStyle(shadow = Shadow(Color(0xCC000000), Offset(0f, 2f), 12f)),
-            )
-            Text(h.date, color = p.muted, fontSize = 24.sp, fontFamily = Tema.body)
+        Box(Modifier.size(410.dp)) {
+            Speedometer(h.speed.kmh, Modifier.fillMaxSize())
+            // Indicadores de luces y GPS, en el hueco de abajo del velocímetro.
+            RadarIndicators(h, Modifier.align(Alignment.TopCenter).padding(top = 322.dp))
+        }
+        val alert = RadarState.alert
+        Box(Modifier.height(125.dp), contentAlignment = Alignment.TopCenter) {
+            if (alert != null && !RadarState.flash) {
+                RadarCard(alert, Modifier.padding(top = 18.dp))
+            } else {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        h.time,
+                        color = p.text, fontSize = 96.sp, lineHeight = 96.sp,
+                        fontFamily = Tema.condensed, fontWeight = FontWeight.SemiBold,
+                        style = TextStyle(shadow = Shadow(Color(0xCC000000), Offset(0f, 2f), 12f)),
+                    )
+                    Text(h.date, color = p.muted, fontSize = 24.sp, fontFamily = Tema.body)
+                }
+            }
         }
     }
 }

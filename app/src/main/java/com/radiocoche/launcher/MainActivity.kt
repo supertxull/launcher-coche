@@ -7,6 +7,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import com.radiocoche.launcher.radar.RadarService
+import com.radiocoche.launcher.radar.RadarStore
 import com.radiocoche.launcher.ui.CarLights
 import com.radiocoche.launcher.ui.DayNight
 import com.radiocoche.launcher.ui.HomeScreen
@@ -19,6 +21,7 @@ class MainActivity : ComponentActivity() {
 
     private val askLocation = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         home.speed.start()
+        RadarService.start(applicationContext)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -28,6 +31,8 @@ class MainActivity : ComponentActivity() {
         DayNight.apply()
         home = HomeState(applicationContext)
         home.radio.start()
+        RadarStore.load(applicationContext)
+        RadarService.start(applicationContext)
 
         setContent {
             // En la pantalla de inicio, atrás solo cierra lo que haya abierto encima.

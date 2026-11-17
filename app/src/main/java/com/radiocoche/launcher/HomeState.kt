@@ -2,6 +2,13 @@ package com.radiocoche.launcher
 
 import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.os.SystemClock
+import android.provider.Settings
+import com.radiocoche.launcher.radar.Kind
+import com.radiocoche.launcher.radar.RadarService
+import com.radiocoche.launcher.radar.RadarStore
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -10,6 +17,12 @@ import java.util.Date
 import java.util.Locale
 
 enum class Source { MUSICA, RADIO }
+
+/** Pantallas de la ventana de radares. */
+enum class RadarView { MAIN, LIMIT, LIST, EDIT }
+
+/** Posición guardada al tocar el indicador del GPS. */
+class Snap(val lat: Double, val lon: Double, val bearing: Float?, val time: Long)
 
 /** Todo lo que muestra la pantalla de inicio. */
 class HomeState(private val ctx: Context) {
@@ -36,6 +49,25 @@ class HomeState(private val ctx: Context) {
     var showApps by mutableStateOf(false)
     var showNavChooser by mutableStateOf(false)
 
+    /** Se puede pintar el aviso sobre otras apps. */
+    var canOverlay by mutableStateOf(true)
+        private set
+
+    // Ventana de radares
+    var showRadars by mutableStateOf(false)
+    var radarView by mutableStateOf(RadarView.MAIN)
+    var snap by mutableStateOf<Snap?>(null)
+        private set
+    var newRadarId by mutableStateOf<String?>(null)
+        private set
+    var editId by mutableStateOf<String?>(null)
+        private set
+    var editKind by mutableStateOf(Kind.EXTRA)
+    var editLimit by mutableStateOf<Int?>(null)
+    var toast by mutableStateOf("")
+        private set
+    private var toastUntil = 0L
+
     private val es = Locale("es", "ES")
     private val timeFormat = SimpleDateFormat("HH:mm", es)
     private val dateFormat = SimpleDateFormat("EEEE · dd-MM-yyyy", es)
@@ -54,6 +86,8 @@ class HomeState(private val ctx: Context) {
 
     fun onResume() {
         isDefaultHome = Apps.isDefaultHome(ctx)
+        canOverlay = Settings.canDrawOverlays(ctx)
+        RadarService.start(ctx)
         speed.start()
         music.connect()
         radio.query()
@@ -71,13 +105,19 @@ class HomeState(private val ctx: Context) {
         date = dateFormat.format(now)
         speed.tick()
         music.tick()
+        if (toast.isNotEmpty() && SystemClock.elapsedRealtime() > toastUntil) toast = ""
+        if (RadarStore.message.isNotEmpty()) {
+            showToast(RadarStore.message)
+            RadarStore.message = ""
+        }
     }
 
     /** Tecla atrás o HOME: cierra lo que haya abierto encima. Devuelve true si cerró algo. */
     fun closeOverlays(): Boolean {
-        val open = showApps || showNavChooser
+        val open = showApps || showNavChooser || showRadars
         showApps = false
         showNavChooser = false
+        closeRadars()
         return open
     }
 
@@ -131,4 +171,67 @@ class HomeState(private val ctx: Context) {
     fun musicPlayPause() { if (!music.playPause()) openMusic() }
     fun musicNext() { if (!music.next()) openMusic() }
     fun musicPrevious() { if (!music.previous()) openMusic() }
+
+    // ------------------------------------------------------------ avisador de radares
+
+    /** Abre el permiso «Mostrar sobre otras apps». */
+    fun openOverlaySettings() {
+        runCatching {
+            ctx.startActivity(
+                Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + ctx.packageName))
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+        }
+    }
+
+    private fun showToast(text: String) {
+        toast = text
+        toastUntil = SystemClock.elapsedRealtime() + 2600
+    }
+
+    /** Toque en el indicador del GPS: se guarda la posición de este instante y se abre la ventana. */
+    fun openRadars() {
+        val l = speed.last
+        snap = if (speed.hasFix && l != null) {
+            val moving = l.hasSpeed() && l.speed * 3.6f > 10f
+            Snap(l.latitude, l.longitude, if (moving && l.hasBearing()) l.bearing else null, SystemClock.elapsedRealtime())
+        } else null
+        radarView = RadarView.MAIN
+        showRadars = true
+    }
+
+    fun closeRadars() {
+        showRadars = false
+        snap = null
+    }
+
+    fun addRadarHere() {
+        val s = snap ?: return
+        newRadarId = RadarStore.addUser(ctx, s.lat, s.lon, s.bearing)
+        radarView = RadarView.LIMIT
+    }
+
+    fun setNewRadarLimit(limit: Int?) {
+        val id = newRadarId ?: return
+        RadarStore.editUser(ctx, id, Kind.EXTRA, limit)
+        radarView = RadarView.MAIN
+        showToast(if (limit != null) "Radar guardado a $limit km/h" else "Radar guardado sin velocidad")
+    }
+
+    fun updateRadars() = RadarStore.update(ctx, manual = true)
+
+    fun startEdit(id: String) {
+        val r = RadarStore.user.firstOrNull { it.id == id } ?: return
+        editId = id
+        editKind = r.kind
+        editLimit = r.limit
+        radarView = RadarView.EDIT
+    }
+
+    fun saveEdit() {
+        editId?.let { RadarStore.editUser(ctx, it, editKind, editLimit) }
+        radarView = RadarView.LIST
+    }
+
+    fun deleteRadar(id: String) = RadarStore.deleteUser(ctx, id)
 }
