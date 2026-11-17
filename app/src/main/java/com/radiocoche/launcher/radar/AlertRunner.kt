@@ -47,18 +47,21 @@ class AlertRunner(private val ctx: Context) {
         mute()
         val useOverlay = Settings.canDrawOverlays(ctx)
         RadarState.overlayActive = useOverlay
+        // Un solo aviso grande, fijo mientras suenan los pitidos (dura lo mismo que los dos destellos de antes).
         var t = 150L
+        main.postDelayed({
+            RadarState.flash = true
+            if (useOverlay) overlay.show(alert)
+        }, t)
         for (i in 0 until count) {
-            main.postDelayed({
-                beep()
-                RadarState.flash = true
-                if (useOverlay) overlay.show(alert)
-            }, t)
-            main.postDelayed({
-                RadarState.flash = false
-                if (useOverlay) overlay.hide()
-            }, t + 420)
-            if (i == count - 1) main.postDelayed({ unmute() }, t + 260)
+            main.postDelayed({ beep() }, t)
+            if (i == count - 1) {
+                main.postDelayed({ unmute() }, t + 260)
+                main.postDelayed({
+                    RadarState.flash = false
+                    if (useOverlay) overlay.hide()
+                }, t + 420)
+            }
             t += 680
         }
         main.postDelayed({

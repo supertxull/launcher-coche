@@ -70,10 +70,6 @@ class FlashOverlay(private val ctx: Context) {
             // La pantalla del diseño mide 1024×552: se escala igual que el launcher.
             val u = minOf(w / 1024f, h / 552f)
             c.drawColor(Color.BLACK)
-            p.style = Paint.Style.STROKE
-            p.color = RED
-            p.strokeWidth = 12 * u
-            c.drawRect(6 * u, 6 * u, w - 6 * u, h - 6 * u, p)
 
             // Señal
             val r = 165 * u

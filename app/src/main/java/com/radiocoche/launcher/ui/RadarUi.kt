@@ -74,7 +74,7 @@ fun RadarIndicators(h: HomeState, modifier: Modifier) {
             Modifier
                 .size(44.dp)
                 .clip(CircleShape)
-                .background(p.panel)
+                .background(Color.Black)
                 .border(if (lights) 2.dp else 1.dp, if (lights) p.accent else p.border2, CircleShape),
             contentAlignment = Alignment.Center,
         ) {
@@ -82,7 +82,7 @@ fun RadarIndicators(h: HomeState, modifier: Modifier) {
         }
         CarButton(
             Modifier.size(44.dp),
-            bg = p.panel,
+            bg = Color.Black,
             border = if (gps) p.accent else p.border2,
             borderWidth = if (gps) 2.dp else 1.dp,
             radius = 22.dp,
@@ -169,7 +169,7 @@ fun RadarCard(a: Alert, modifier: Modifier) {
 fun RadarFlash(a: Alert) {
     val p = Tema.p
     Box(
-        Modifier.fillMaxSize().background(Color.Black).border(12.dp, SignRed),
+        Modifier.fillMaxSize().background(Color.Black),
         contentAlignment = Alignment.Center,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(56.dp)) {
