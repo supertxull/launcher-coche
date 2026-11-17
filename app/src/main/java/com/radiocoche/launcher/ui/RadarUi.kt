@@ -279,7 +279,14 @@ private fun ColumnScope.RadarMain(h: HomeState) {
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         val last = RadarStore.lastUpdate
-        Info("ÚLTIMA ACTUALIZACIÓN", if (last == 0L) "Nunca" else updatedText(last))
+        Info(
+            "ÚLTIMA ACTUALIZACIÓN",
+            when {
+                last != 0L -> updatedText(last)
+                RadarStore.bundledDate.isNotEmpty() -> "Incluida, ${RadarStore.bundledDate}"
+                else -> "Nunca"
+            },
+        )
         Info("LISTA OFICIAL", if (RadarStore.official.isEmpty()) "Sin descargar" else "${RadarStore.official.size} radares")
         Info("TUS RADARES EXTRA", "${RadarStore.user.size}")
     }

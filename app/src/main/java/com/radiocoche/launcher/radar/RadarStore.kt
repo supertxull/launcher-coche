@@ -60,6 +60,10 @@ object RadarStore {
     /** Último resultado de una actualización pedida a mano ("" si nada). */
     var message by mutableStateOf("")
 
+    /** Fecha de la lista que va dentro de la app ("" si no lleva). */
+    var bundledDate by mutableStateOf("")
+        private set
+
     /** De dónde salió la lista en uso. */
     var sourceName by mutableStateOf("")
         private set
@@ -77,6 +81,9 @@ object RadarStore {
         loaded = true
         val app = ctx.applicationContext
         lastUpdate = prefs(app).getLong("lastUpdate", 0L)
+        bundledDate = runCatching {
+            app.assets.open("radares/fecha.txt").bufferedReader().readText().trim().split("-").reversed().joinToString("-")
+        }.getOrDefault("")
         thread(name = "radares-carga") {
             val (list, name) = readOfficial(app)
             val mine = readUser(app)
@@ -227,6 +234,13 @@ object RadarStore {
                 return it to "DGT"
             }
         }
+        // Nunca se ha descargado: la lista que va dentro de la app.
+        runCatching {
+            ctx.assets.open("radares/$FEED_FILE").bufferedReader().use { parseFeed(it.readText()) }
+        }.getOrNull()?.takeIf { it.isNotEmpty() }?.let { return it to "Incluida en la app" }
+        runCatching {
+            ctx.assets.open("radares/$DGT_FILE").use { parseDgt(it.readBytes()) }
+        }.getOrNull()?.takeIf { it.isNotEmpty() }?.let { return it to "Incluida en la app (DGT)" }
         return emptyList<Radar>() to ""
     }
 

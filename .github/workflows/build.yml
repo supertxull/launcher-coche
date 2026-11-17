@@ -46,6 +46,37 @@ jobs:
           curl -fsSL -o OFL.txt $G/barlow/OFL.txt || true
           ls -l
 
+      - name: Descargar las listas de radares e incluirlas en la app
+        run: |
+          set +e
+          D=app/src/main/assets/radares
+          mkdir -p $D /tmp/radares
+          cd /tmp/radares
+          ok=0
+          # Radares Anunciados (incluye la DGT, Cataluña, País Vasco, Navarra y ayuntamientos)
+          if curl -fsSL --retry 3 --max-time 180 -o feed.geojson https://geiserx.github.io/radares-anunciados-ha/feed.geojson \
+             && python3 -c "import json,sys; n=len(json.load(open('feed.geojson'))['features']); print('feed:',n); sys.exit(0 if n>300 else 1)"; then
+            cp feed.geojson $GITHUB_WORKSPACE/$D/radares_anunciados.geojson; ok=1
+          else
+            echo "::warning::No se pudo descargar Radares Anunciados; se usa la copia guardada"
+          fi
+          # DGT (plan B)
+          for u in https://nap.dgt.es/datex2/dgt/PredefinedLocationsPublication/radares/content.xml https://infocar.dgt.es/datex2/dgt/PredefinedLocationsPublication/radares/content.xml; do
+            if curl -fsSL --retry 2 --max-time 180 -o dgt.xml "$u" && [ $(stat -c%s dgt.xml) -gt 100000 ] && grep -q "predefinedLocation" dgt.xml; then
+              cp dgt.xml $GITHUB_WORKSPACE/$D/radares_dgt.xml; ok=1; break
+            fi
+          done
+          cd $GITHUB_WORKSPACE
+          if [ $ok = 1 ]; then date -u +%Y-%m-%d > $D/fecha.txt; fi
+          ls -l $D
+          # Guarda en el repositorio la última copia buena (por si otro día falla la descarga).
+          if [ -n "$(git status --porcelain $D)" ]; then
+            git config user.name "github-actions"
+            git config user.email "github-actions@users.noreply.github.com"
+            git add $D
+            git commit -m "Listas de radares actualizadas" && git push || echo "::warning::No se pudo guardar la copia en el repositorio"
+          fi
+
       - name: Compilar las APK
         run: |
           chmod +x gradlew
