@@ -74,7 +74,7 @@ fun RadarIndicators(h: HomeState, modifier: Modifier) {
             Modifier
                 .size(44.dp)
                 .clip(CircleShape)
-                .background(if (lights) p.panel else p.raised)
+                .background(p.panel)
                 .border(if (lights) 2.dp else 1.dp, if (lights) p.accent else p.border2, CircleShape),
             contentAlignment = Alignment.Center,
         ) {
@@ -82,7 +82,7 @@ fun RadarIndicators(h: HomeState, modifier: Modifier) {
         }
         CarButton(
             Modifier.size(44.dp),
-            bg = if (gps) p.panel else p.raised,
+            bg = p.panel,
             border = if (gps) p.accent else p.border2,
             borderWidth = if (gps) 2.dp else 1.dp,
             radius = 22.dp,
