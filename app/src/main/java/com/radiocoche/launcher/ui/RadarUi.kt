@@ -50,6 +50,7 @@ import com.radiocoche.launcher.radar.Geo
 import com.radiocoche.launcher.radar.Kind
 import com.radiocoche.launcher.radar.Phase
 import com.radiocoche.launcher.radar.Radar
+import com.radiocoche.launcher.radar.RadarState
 import com.radiocoche.launcher.radar.RadarStore
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
@@ -87,7 +88,7 @@ fun RadarIndicators(h: HomeState, modifier: Modifier) {
             radius = 22.dp,
             onClick = { h.openRadars() },
         ) {
-            CarIcon(if (gps) Ic.Gps else Ic.GpsOff, 26.dp, if (gps) p.accent else AlertRed, if (gps) "GPS conectado" else "Sin señal GPS")
+            CarIcon(if (gps) Ic.Gps else Ic.GpsOff, 26.dp, if (gps) p.accent else Color.White, if (gps) "GPS conectado" else "Sin señal GPS")
         }
     }
 }
@@ -224,6 +225,11 @@ fun RadarDialog(h: HomeState) {
                     color = p.text, fontSize = 28.sp, fontWeight = FontWeight.SemiBold, fontFamily = Tema.body,
                     modifier = Modifier.weight(1f),
                 )
+                if (h.radarView == RadarView.MAIN) {
+                    CarButton(Modifier.height(50.dp), bg = p.raised, border = p.border2, radius = 25.dp, onClick = { h.testAlert() }) {
+                        Text("Probar aviso", color = p.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, fontFamily = Tema.body, modifier = Modifier.padding(horizontal = 20.dp))
+                    }
+                }
                 RoundIcon(Ic.Close, "Cerrar") { h.closeRadars() }
             }
             when (h.radarView) {
@@ -290,8 +296,15 @@ private fun ColumnScope.RadarMain(h: HomeState) {
         Info("LISTA OFICIAL", if (RadarStore.official.isEmpty()) "Sin descargar" else "${RadarStore.official.size} radares")
         Info("TUS RADARES EXTRA", "${RadarStore.user.size}")
     }
+    val status = when {
+        h.toast.isNotEmpty() -> h.toast
+        !RadarState.running -> "El avisador está parado"
+        !h.speed.hasFix -> "Avisador en marcha · esperando al GPS"
+        else -> "Avisador en marcha · " + (if (RadarState.heading) "rumbo OK" else "sin rumbo (en marcha se calcula)") +
+            " · " + (if (RadarState.nearby == 1) "1 radar" else "${RadarState.nearby} radares") + " a menos de 2 km"
+    }
     Text(
-        h.toast, color = p.accent, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, fontFamily = Tema.body,
+        status, color = if (h.toast.isNotEmpty()) p.accent else p.muted, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, fontFamily = Tema.body,
         textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth(),
     )
 }

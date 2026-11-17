@@ -256,7 +256,9 @@ object RadarStore {
             val g = f.optJSONObject("geometry") ?: continue
             val id = f.optString("id", "f$i")
             val limit = if (p.isNull("maxspeed")) null else p.optInt("maxspeed", 0).takeIf { it in 10..150 }
-            val bearing = if (p.has("bearing") && !p.isNull("bearing")) p.optDouble("bearing").toFloat() else null
+            // El sentido solo se usa si la fuente lo da con seguridad: más vale un aviso de más que uno de menos.
+            val bearing = if (p.has("bearing") && !p.isNull("bearing") && p.optString("direction_confidence") == "high")
+                p.optDouble("bearing").toFloat() else null
             when (g.optString("type")) {
                 "Point" -> {
                     val c = g.getJSONArray("coordinates")

@@ -34,6 +34,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -144,20 +145,22 @@ private fun SpeedAndClock(h: HomeState, modifier: Modifier) {
             RadarIndicators(h, Modifier.align(Alignment.TopCenter).padding(top = 322.dp))
         }
         val alert = RadarState.alert
-        Box(Modifier.height(125.dp), contentAlignment = Alignment.TopCenter) {
-            if (alert != null && !RadarState.flash) {
-                RadarCard(alert, Modifier.padding(top = 18.dp))
-            } else {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        h.time,
-                        color = p.text, fontSize = 96.sp, lineHeight = 96.sp,
-                        fontFamily = Tema.condensed, fontWeight = FontWeight.SemiBold,
-                        style = TextStyle(shadow = Shadow(Color(0xCC000000), Offset(0f, 2f), 12f)),
-                    )
-                    Text(h.date, color = p.muted, fontSize = 24.sp, fontFamily = Tema.body)
-                }
+        val showCard = alert != null && !RadarState.flash
+        Box(contentAlignment = Alignment.TopCenter) {
+            // El reloj ocupa siempre su sitio (así no se mueve nada); con aviso se oculta y encima va el cartel.
+            Column(
+                Modifier.alpha(if (showCard) 0f else 1f),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    h.time,
+                    color = p.text, fontSize = 96.sp, lineHeight = 96.sp,
+                    fontFamily = Tema.condensed, fontWeight = FontWeight.SemiBold,
+                    style = TextStyle(shadow = Shadow(Color(0xCC000000), Offset(0f, 2f), 12f)),
+                )
+                Text(h.date, color = p.muted, fontSize = 24.sp, fontFamily = Tema.body)
             }
+            if (showCard && alert != null) RadarCard(alert, Modifier.padding(top = 14.dp))
         }
     }
 }

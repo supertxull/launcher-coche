@@ -29,14 +29,27 @@ class RadarEngine(private val runner: AlertRunner) {
     private var section: Section? = null
     private var sectionEndUntil = 0L
     private var last: Location? = null
+    private var headingRef: Location? = null
     private val alerted = HashMap<String, Long>()
 
     fun onLocation(loc: Location) {
         val now = SystemClock.elapsedRealtime()
-        val kmh = if (loc.hasSpeed()) loc.speed * 3.6f else 0f
-        val heading = if (loc.hasBearing() && kmh > 10f) loc.bearing else null
         val prev = last
         last = loc
+        // Velocidad: la del GPS o, si no la da, la calculada entre dos posiciones.
+        val kmh = when {
+            loc.hasSpeed() -> loc.speed * 3.6f
+            prev != null && loc.time > prev.time -> prev.distanceTo(loc) / ((loc.time - prev.time) / 1000f) * 3.6f
+            else -> 0f
+        }
+        // Rumbo: el del GPS o, si no lo da, el del último tramo recorrido (al menos 10 m).
+        val ref = headingRef
+        if (ref == null || ref.distanceTo(loc) > 60f) headingRef = loc
+        val heading: Float? = when {
+            loc.hasBearing() && kmh > 8f -> loc.bearing
+            ref != null && ref.distanceTo(loc) >= 10f -> Geo.bearing(ref.latitude, ref.longitude, loc.latitude, loc.longitude)
+            else -> null
+        }
 
         // Limpieza de radares ya avisados (5 minutos).
         alerted.entries.removeAll { now - it.value > 5 * 60 * 1000 }
@@ -97,19 +110,24 @@ class RadarEngine(private val runner: AlertRunner) {
         }
 
         // --- Buscar un radar nuevo
-        if (target != null || heading == null || kmh < 15f) return
+        val around = RadarStore.near(loc.latitude, loc.longitude)
+        RadarState.nearby = around.count { Geo.distance(loc.latitude, loc.longitude, it.lat, it.lon) < 2000 }
+        RadarState.heading = heading != null
+        if (target != null || heading == null || kmh < 10f) return
         val warn = (kmh / 3.6 * 25).coerceIn(300.0, 900.0)
         var best: Radar? = null
         var bestD = Double.MAX_VALUE
-        for (r in RadarStore.near(loc.latitude, loc.longitude)) {
+        for (r in around) {
             if (alerted.containsKey(r.id)) continue
             if (r.kind == Kind.SECTION && section != null) continue
             val d = Geo.distance(loc.latitude, loc.longitude, r.lat, r.lon)
-            if (d > warn || d < 40) continue
+            if (d > warn || d < 30) continue
+            // Delante de nosotros: margen amplio para curvas (más aún cerca del radar).
             val toRadar = Geo.bearing(loc.latitude, loc.longitude, r.lat, r.lon)
-            if (Geo.angle(heading, toRadar) > 30f) continue
+            if (Geo.angle(heading, toRadar) > (if (d < 200) 70f else 45f)) continue
+            // Sentido del radar: solo se usa cuando la fuente lo da con seguridad.
             val rb = r.bearing
-            if (rb != null && Geo.angle(heading, rb) > 60f) continue
+            if (rb != null && Geo.angle(heading, rb) > 70f) continue
             if (d < bestD) {
                 best = r
                 bestD = d

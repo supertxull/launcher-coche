@@ -59,6 +59,12 @@ class RadarService : Service() {
         RadarStore.load(this)
         goForeground()
         RadarState.running = true
+        RadarState.test = {
+            val a = Alert(Kind.FIXED, 50, Phase.APPROACH, distance = 500, speed = 0)
+            RadarState.alert = a
+            runner.approach(a)
+            handler.postDelayed({ if (RadarState.alert == a) RadarState.alert = null }, 6000)
+        }
         handler.postDelayed(updateCheck, 20 * 1000L)
     }
 
@@ -75,6 +81,7 @@ class RadarService : Service() {
         }
         runner.release()
         RadarState.running = false
+        RadarState.test = null
         RadarState.alert = null
         super.onDestroy()
     }

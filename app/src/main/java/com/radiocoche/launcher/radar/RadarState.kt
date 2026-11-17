@@ -34,4 +34,13 @@ object RadarState {
 
     /** El servicio del avisador está en marcha. */
     var running by mutableStateOf(false)
+
+    /** Radares a menos de 2 km (para comprobar que la lista se está usando). */
+    var nearby by mutableStateOf(0)
+
+    /** Se sabe hacia dónde vamos (rumbo del GPS o calculado). */
+    var heading by mutableStateOf(false)
+
+    /** Aviso de prueba (lo pone el servicio). */
+    var test: (() -> Unit)? = null
 }

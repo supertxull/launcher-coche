@@ -220,6 +220,17 @@ class HomeState(private val ctx: Context) {
 
     fun updateRadars() = RadarStore.update(ctx, manual = true)
 
+    /** Aviso de prueba: pitidos, silencio y destello, sin moverse. */
+    fun testAlert() {
+        val t = com.radiocoche.launcher.radar.RadarState.test
+        if (t == null) {
+            showToast("El avisador no está en marcha")
+            return
+        }
+        closeRadars()
+        t()
+    }
+
     fun startEdit(id: String) {
         val r = RadarStore.user.firstOrNull { it.id == id } ?: return
         editId = id
