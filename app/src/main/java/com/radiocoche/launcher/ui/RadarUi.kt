@@ -82,9 +82,9 @@ fun RadarIndicators(h: HomeState, modifier: Modifier) {
         }
         CarButton(
             Modifier.size(44.dp),
-            bg = if (gps) p.panel else Color(0xFF4A0808),
-            border = if (gps) p.accent else SignRed,
-            borderWidth = 2.dp,
+            bg = if (gps) p.panel else p.raised,
+            border = if (gps) p.accent else p.border2,
+            borderWidth = if (gps) 2.dp else 1.dp,
             radius = 22.dp,
             onClick = { h.openRadars() },
         ) {
