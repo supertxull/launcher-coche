@@ -34,6 +34,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
@@ -133,21 +134,21 @@ fun HomeScreen(h: HomeState) {
 @Composable
 private fun SpeedAndClock(h: HomeState, modifier: Modifier) {
     val p = Tema.p
-    Column(
-        modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        // La hora monta un poco sobre la parte baja del velocímetro, como en el diseño.
-        verticalArrangement = Arrangement.spacedBy((-44).dp, Alignment.CenterVertically),
-    ) {
-        Box(Modifier.size(410.dp)) {
-            Speedometer(h.speed.kmh, Modifier.fillMaxSize())
-            // Indicadores de luces y GPS, en el hueco de abajo del velocímetro.
-            RadarIndicators(h, Modifier.align(Alignment.TopCenter).padding(top = 322.dp))
-        }
-        val alert = RadarState.alert
-        val showCard = alert != null && !RadarState.flash
-        Box(contentAlignment = Alignment.TopCenter) {
-            // El reloj ocupa siempre su sitio (así no se mueve nada); con aviso se oculta y encima va el cartel.
+    val alert = RadarState.alert
+    val showCard = alert != null && !RadarState.flash
+    Box(modifier) {
+        Column(
+            Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            // La hora monta un poco sobre la parte baja del velocímetro, como en el diseño.
+            verticalArrangement = Arrangement.spacedBy((-44).dp, Alignment.CenterVertically),
+        ) {
+            Box(Modifier.size(410.dp)) {
+                Speedometer(h.speed.kmh, Modifier.fillMaxSize())
+                // Indicadores de luces y GPS, en el hueco de abajo del velocímetro.
+                RadarIndicators(h, Modifier.align(Alignment.TopCenter).padding(top = 322.dp))
+            }
+            // El reloj ocupa siempre su sitio (así no se mueve nada); con aviso se oculta.
             Column(
                 Modifier.alpha(if (showCard) 0f else 1f),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -160,7 +161,10 @@ private fun SpeedAndClock(h: HomeState, modifier: Modifier) {
                 )
                 Text(h.date, color = p.muted, fontSize = 24.sp, fontFamily = Tema.body)
             }
-            if (showCard && alert != null) RadarCard(alert, Modifier.padding(top = 14.dp))
+        }
+        // Cartel del radar en una capa superior: tapa la hora y, si hace falta, los indicadores.
+        if (showCard && alert != null) {
+            RadarCard(alert, Modifier.align(Alignment.BottomCenter).padding(bottom = 14.dp).zIndex(1f))
         }
     }
 }

@@ -145,12 +145,20 @@ fun RadarCard(a: Alert, modifier: Modifier) {
         Phase.SECTION_END -> Triple("Radar de tramo", "Fin de tramo", "Media final ${a.average} km/h")
     }
     val mainRed = a.phase == Phase.IN_SECTION && a.limit != null && a.average > a.limit
-    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-        Sign(a.kind, a.limit, 100.dp)
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(title.uppercase(), color = p.accent, fontSize = 17.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp, fontFamily = Tema.body)
-            Text(main, color = if (mainRed) AlertRed else p.text, fontSize = 40.sp, lineHeight = 42.sp, fontFamily = Tema.condensed, fontWeight = FontWeight.SemiBold)
-            Text(sub, color = p.muted, fontSize = 20.sp, fontFamily = Tema.body)
+    Row(
+        modifier
+            .clip(RoundedCornerShape(24.dp))
+            .background(Color.Black)
+            .border(2.dp, SignRed, RoundedCornerShape(24.dp))
+            .padding(horizontal = 18.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Sign(a.kind, a.limit, 120.dp)
+        Column(Modifier.width(250.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(title.uppercase(), color = p.accent, fontSize = 18.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp, fontFamily = Tema.body, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(main, color = if (mainRed) AlertRed else p.text, fontSize = 46.sp, lineHeight = 48.sp, fontFamily = Tema.condensed, fontWeight = FontWeight.SemiBold, maxLines = 1)
+            Text(sub, color = p.muted, fontSize = 21.sp, fontFamily = Tema.body, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
