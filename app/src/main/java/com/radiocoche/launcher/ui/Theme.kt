@@ -25,10 +25,7 @@ data class Palette(
     val track: Color,
 )
 
-/**
- * Siempre los mismos colores: como en la Radio y Música, no hay señal de las luces,
- * así que no se cambia entre día y noche.
- */
+/** Luces apagadas: contraste alto, para el sol. */
 val LauncherPalette = Palette(
     bg = Color(0xFF000000), panel = Color(0xFF1C2230), raised = Color(0xFF2A3242),
     border = Color(0xFF56627A), border2 = Color(0xFF6E7B94),
@@ -36,6 +33,25 @@ val LauncherPalette = Palette(
     accent = Color(0xFFFF6A1A), accentBg = Color(0xFF4A2008),
     track = Color(0xFF6E7B94),
 )
+
+/** Luces encendidas: los colores oscuros de la Radio y Música. */
+val NightPalette = Palette(
+    bg = Color(0xFF0B0E13), panel = Color(0xFF151A22), raised = Color(0xFF1B212B),
+    border = Color(0xFF232A35), border2 = Color(0xFF2A3240),
+    text = Color(0xFFF2F4F7), muted = Color(0xFFA3ADBB), dim = Color(0xFF7A8494),
+    accent = Color(0xFFFF6A1A), accentBg = Color(0xFF2B140A),
+    track = Color(0xFF343C4A),
+)
+
+/** Colores según las luces del coche ([CarLights]); si aún no se sabe, contraste alto. */
+object DayNight {
+    fun isNight(): Boolean = CarLights.on == true
+
+    fun apply() {
+        val next = if (isNight()) NightPalette else LauncherPalette
+        if (Tema.p !== next) Tema.p = next
+    }
+}
 
 /** Rojo de la aguja del velocímetro y de la marca del dial. */
 val NeedleRed = Color(0xFFFF0000)

@@ -7,6 +7,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import com.radiocoche.launcher.ui.CarLights
+import com.radiocoche.launcher.ui.DayNight
 import com.radiocoche.launcher.ui.HomeScreen
 import com.radiocoche.launcher.ui.ScaledRoot
 import com.radiocoche.launcher.ui.Tema
@@ -22,6 +24,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Tema.loadFonts(applicationContext)
+        CarLights.start(this) { DayNight.apply() }
+        DayNight.apply()
         home = HomeState(applicationContext)
         home.radio.start()
 
@@ -46,6 +50,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        DayNight.apply()
         home.onResume()
     }
 
