@@ -12,6 +12,7 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import com.radiocoche.launcher.Pkg
+import com.radiocoche.launcher.ui.CarLights
 import kotlin.math.PI
 import kotlin.math.min
 import kotlin.math.sin
@@ -117,10 +118,19 @@ class AlertRunner(private val ctx: Context) {
         radio("unmute")
     }
 
-    /** Orden a la Radio propia (desde la Radio 0.20), solo si lo último que se usó es la Radio. */
+    /**
+     * Quita (mute) o devuelve (unmute) el sonido de la radio, solo si lo último que se usó es la Radio.
+     *
+     * Se hace desde el launcher con su conexión al microcontrolador, que ya está abierta: así es inmediato.
+     * Antes se pedía a la app Radio, que tenía que arrancar, abrir la conexión, pedir el estado, escribir
+     * y cerrarla enseguida: el sonido tardaba en volver.
+     */
     private fun radio(cmd: String) {
         val source = ctx.getSharedPreferences("launcher", Context.MODE_PRIVATE).getString("source", "")
         if (source != "RADIO") return
+        val on = cmd == "unmute"
+        if (CarLights.write(MSG_SOURCE, RADIO_AUDIO, if (on) 1 else 0)) return
+        // Sin conexión propia: se lo pide a la Radio (Radio 0.20+).
         runCatching {
             ctx.sendBroadcast(Intent("com.radiocoche.radio.CMD").setPackage(Pkg.RADIO).putExtra("cmd", cmd))
         }
@@ -157,5 +167,8 @@ class AlertRunner(private val ctx: Context) {
 
     private companion object {
         const val RATE = 44100
+        /** Fuente de audio del microcontrolador (la Radio usa (0x9E11, 192, 1) para pedir su audio). */
+        const val MSG_SOURCE = 0x9E11
+        const val RADIO_AUDIO = 192
     }
 }

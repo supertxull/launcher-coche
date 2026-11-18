@@ -48,7 +48,21 @@ object CarLights {
                 cls.getMethod("write", Int::class.javaPrimitiveType, Int::class.javaPrimitiveType).invoke(util, MSG_LIGHTS, 255)
             }
             tw = util
+            write3 = cls.getMethod("write", Int::class.javaPrimitiveType, Int::class.javaPrimitiveType, Int::class.javaPrimitiveType)
         } catch (_: Throwable) {
         }
+    }
+
+    private var write3: java.lang.reflect.Method? = null
+
+    /**
+     * Orden directa al microcontrolador con la conexión que ya está abierta (sin abrir ni cerrar nada).
+     * La usa el aviso de radares para quitar y devolver el sonido de la radio al instante.
+     * Devuelve false si no hay conexión (fuera de la unidad).
+     */
+    fun write(what: Int, a1: Int, a2: Int): Boolean {
+        val util = tw ?: return false
+        val m = write3 ?: return false
+        return runCatching { m.invoke(util, what, a1, a2) }.isSuccess
     }
 }

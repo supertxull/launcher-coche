@@ -54,6 +54,8 @@ class RadarService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        // Conexión con el microcontrolador abierta desde ya (la usa el silencio de la radio).
+        com.radiocoche.launcher.ui.CarLights.start(applicationContext) {}
         runner = AlertRunner(this)
         engine = RadarEngine(runner)
         RadarStore.load(this)
