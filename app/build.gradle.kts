@@ -12,8 +12,8 @@ android {
         applicationId = "com.radiocoche.launcher"
         minSdk = 21
         targetSdk = 34
-        versionCode = 13
-        versionName = "0.13"
+        versionCode = 14
+        versionName = "0.14"
     }
 
     // Misma firma fija que la Radio y Música (archivo app/radio.keystore).

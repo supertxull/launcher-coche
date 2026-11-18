@@ -31,6 +31,23 @@ class RadarEngine(private val runner: AlertRunner) {
     private var last: Location? = null
     private var headingRef: Location? = null
     private val alerted = HashMap<String, Long>()
+    /** Radares descartados por no estar en nuestra vía: solo vuelven a avisar si quedan claramente delante. */
+    private val dismissed = HashMap<String, Long>()
+    /** Candidato pendiente de confirmar (hace falta verlo dos veces seguidas acercándonos). */
+    private var pendingId: String? = null
+    private var pendingD = 0.0
+
+    /** Distancia, avance (a lo largo de nuestro rumbo) y desvío lateral hasta el radar, en metros. */
+    private class Geom(val d: Double, val along: Double, val cross: Double)
+
+    private fun geom(loc: Location, heading: Float, r: Radar): Geom {
+        val d = Geo.distance(loc.latitude, loc.longitude, r.lat, r.lon)
+        val a = Math.toRadians(Geo.angle(heading, Geo.bearing(loc.latitude, loc.longitude, r.lat, r.lon)).toDouble())
+        return Geom(d, d * kotlin.math.cos(a), d * kotlin.math.sin(a))
+    }
+
+    /** Desvío lateral máximo para considerar que el radar está en nuestra vía (más margen lejos, por las curvas). */
+    private fun crossLimit(along: Double) = (35 + 0.1 * along).coerceIn(45.0, 110.0)
 
     fun onLocation(loc: Location) {
         val now = SystemClock.elapsedRealtime()
@@ -53,6 +70,7 @@ class RadarEngine(private val runner: AlertRunner) {
 
         // Limpieza de radares ya avisados (5 minutos).
         alerted.entries.removeAll { now - it.value > 5 * 60 * 1000 }
+        dismissed.entries.removeAll { now - it.value > 5 * 60 * 1000 }
 
         // --- Tramo en curso
         val s = section
@@ -91,7 +109,19 @@ class RadarEngine(private val runner: AlertRunner) {
             val d = Geo.distance(loc.latitude, loc.longitude, r.lat, r.lon)
             if (d < t.min) t.min = d
             val passed = t.min < 70 && d > t.min + 20
-            val gone = d > 1300
+            // Nos alejamos (más de 150 m desde lo más cerca que estuvimos): el radar ya no nos afecta.
+            val away = d > t.min + 150
+            val g = if (heading != null) geom(loc, heading, r) else null
+            // Lo hemos dejado a un lado sin pasar por él (calle perpendicular, vía de servicio…).
+            val besides = g != null && g.along < 0 && d > 60
+            // A menos de 300 m sigue a más de 50 m de nuestro rumbo: no está en nuestra vía.
+            val offRoad = g != null && g.along in 0.0..300.0 && g.cross > 50
+            val gone = d > 1300 || away || besides || offRoad
+            if (offRoad || besides) {
+                // Puede volver a avisar, pero solo si queda claramente delante en nuestra vía.
+                alerted.remove(r.id)
+                dismissed[r.id] = now
+            }
             if (passed || gone) {
                 target = null
                 RadarState.alert = null
@@ -120,20 +150,35 @@ class RadarEngine(private val runner: AlertRunner) {
         for (r in around) {
             if (alerted.containsKey(r.id)) continue
             if (r.kind == Kind.SECTION && section != null) continue
-            val d = Geo.distance(loc.latitude, loc.longitude, r.lat, r.lon)
-            if (d > warn || d < 30) continue
-            // Delante de nosotros: margen amplio para curvas (más aún cerca del radar).
-            val toRadar = Geo.bearing(loc.latitude, loc.longitude, r.lat, r.lon)
-            if (Geo.angle(heading, toRadar) > (if (d < 200) 70f else 45f)) continue
+            val g = geom(loc, heading, r)
+            if (g.d > warn || g.d < 30) continue
+            // Delante y en nuestra vía: poco desvío lateral respecto a nuestro rumbo.
+            // (Antes bastaba un ángulo de ±45°, que a 800 m deja hasta 560 m a un lado: de ahí las falsas alarmas.)
+            if (g.along < 30) continue
+            if (dismissed.containsKey(r.id)) {
+                if (g.d > 300 || g.cross > 30) continue
+            } else if (g.cross > crossLimit(g.along)) continue
             // Sentido del radar: solo se usa cuando la fuente lo da con seguridad.
             val rb = r.bearing
             if (rb != null && Geo.angle(heading, rb) > 70f) continue
-            if (d < bestD) {
+            if (g.d < bestD) {
                 best = r
-                bestD = d
+                bestD = g.d
             }
         }
-        val r = best ?: return
+        val r = best
+        if (r == null) {
+            pendingId = null
+            return
+        }
+        // Confirmación: el mismo radar dos veces seguidas y cada vez más cerca.
+        if (pendingId != r.id || bestD >= pendingD) {
+            pendingId = r.id
+            pendingD = bestD
+            return
+        }
+        pendingId = null
+        dismissed.remove(r.id)
         alerted[r.id] = now
         // Los dos extremos de un mismo tramo vigilado no avisan dos veces seguidas.
         if (r.kind == Kind.MOBILE_STRETCH) {
