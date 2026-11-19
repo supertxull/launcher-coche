@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.sp
 import com.radiocoche.launcher.HomeState
 import com.radiocoche.launcher.RadarView
 import com.radiocoche.launcher.radar.Alert
+import com.radiocoche.launcher.radar.AlertVolume
 import com.radiocoche.launcher.radar.Geo
 import com.radiocoche.launcher.radar.Kind
 import com.radiocoche.launcher.radar.Phase
@@ -234,6 +235,16 @@ fun RadarDialog(h: HomeState) {
                     modifier = Modifier.weight(1f),
                 )
                 if (h.radarView == RadarView.MAIN) {
+                    // Volumen general al que suenan los avisos (0–30, el del mando de la unidad).
+                    val ctx = androidx.compose.ui.platform.LocalContext.current
+                    val level = AlertVolume.level.also { AlertVolume.get(ctx) }
+                    Text("VOLUMEN AVISO", color = p.dim, fontSize = 14.sp, letterSpacing = 1.sp, fontFamily = Tema.body)
+                    RoundIcon(Ic.Minus, "Bajar volumen del aviso") { AlertVolume.change(ctx, -1) }
+                    Text(
+                        "$level", color = p.accent, fontSize = 30.sp, fontFamily = Tema.condensed, fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center, modifier = Modifier.width(40.dp),
+                    )
+                    RoundIcon(Ic.Plus, "Subir volumen del aviso") { AlertVolume.change(ctx, 1) }
                     CarButton(Modifier.height(50.dp), bg = p.raised, border = p.border2, radius = 25.dp, onClick = { h.testAlert() }) {
                         Text("Probar aviso", color = p.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, fontFamily = Tema.body, modifier = Modifier.padding(horizontal = 20.dp))
                     }

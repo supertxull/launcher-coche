@@ -103,6 +103,8 @@ class AlertRunner(private val ctx: Context) {
             runCatching { audio.requestAudioFocus(null, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT) }
         }
         radio("mute")
+        loud()
+        btPause()
     }
 
     private fun unmute() {
@@ -116,6 +118,46 @@ class AlertRunner(private val ctx: Context) {
             runCatching { audio.abandonAudioFocus(null) }
         }
         radio("unmute")
+        restoreVolume()
+        btResume()
+    }
+
+    // ------------------------------------------------------------------ volumen y Bluetooth
+
+    /** Volumen general que había antes del aviso (para devolverlo); null = no se tocó. */
+    private var savedVolume: Int? = null
+    private var btWasPlaying = false
+
+    /**
+     * Pone el volumen general de la unidad (el del mando, 0–30) en el nivel elegido para los avisos,
+     * para que se oigan aunque el mando esté a 0. Orden del microcontrolador: (0x203, 1, nivel).
+     */
+    private fun loud() {
+        val now = CarLights.volume ?: return // sin saber el volumen actual no se toca (no se podría devolver)
+        val target = AlertVolume.get(ctx)
+        if (now == target) return
+        if (CarLights.write(MSG_VOLUME, 1, target)) savedVolume = now
+    }
+
+    private fun restoreVolume() {
+        val v = savedVolume ?: return
+        savedVolume = null
+        CarLights.write(MSG_VOLUME, 1, v)
+    }
+
+    /**
+     * La música Bluetooth la reproduce la app de fábrica (com.tw.bt) y no se para con el foco de sonido:
+     * se pausa con su orden de play/pausa (20, 0) y se reanuda al acabar.
+     */
+    private fun btPause() {
+        btWasPlaying = false
+        if (CarLights.btPlaying == true && CarLights.write(MSG_BT, 0)) btWasPlaying = true
+    }
+
+    private fun btResume() {
+        if (!btWasPlaying) return
+        btWasPlaying = false
+        CarLights.write(MSG_BT, 0)
     }
 
     /**
@@ -170,5 +212,9 @@ class AlertRunner(private val ctx: Context) {
         /** Fuente de audio del microcontrolador (la Radio usa (0x9E11, 192, 1) para pedir su audio). */
         const val MSG_SOURCE = 0x9E11
         const val RADIO_AUDIO = 192
+        /** Volumen general de la unidad: (0x203, 1, nivel 0–30). */
+        const val MSG_VOLUME = 0x203
+        /** Órdenes de la música Bluetooth: 0 = play/pausa, 2 = siguiente, 3 = anterior. */
+        const val MSG_BT = 20
     }
 }

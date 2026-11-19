@@ -81,6 +81,8 @@ object Ic {
     val PinPlus = icon("pin_mas", P("M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z", w = 1.9f), P("M12 7v6M9 10h6", w = 1.9f))
     val Refresh = icon("actualizar", P("M21 12a9 9 0 1 1-2.6-6.4", w = 1.9f), P("M21 3v6h-6", w = 1.9f))
     val ListIcon = icon("lista", P("M8 6h13M8 12h13M8 18h13", w = 1.9f), P("M3 6h.01M3 12h.01M3 18h.01", w = 2.6f))
+    val Minus = icon("menos", P("M5 12h14", w = 2.6f))
+    val Plus = icon("mas", P("M12 5v14M5 12h14", w = 2.6f))
     val Close = icon("cerrar", P("M6 6l12 12M18 6L6 18", w = 2.4f))
     val Pencil = icon("editar", P("M12 20h9"), P("M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"))
     val Trash = icon("borrar", P("M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"))

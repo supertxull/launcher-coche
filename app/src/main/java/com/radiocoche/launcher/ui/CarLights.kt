@@ -26,11 +26,21 @@ import androidx.compose.runtime.setValue
 object CarLights {
     private const val MSG_LIGHTS = 0x204
     const val ACTION = "com.radiocoche.LIGHTS"
-    private val LISTEN = intArrayOf(0x201, 0x203, MSG_LIGHTS, 0x301)
+    private const val MSG_VOLUME = 0x203   // volumen general: arg1 = nivel (0–30), arg2 = máximo
+    private const val MSG_BT_PLAY = 0x15    // música Bluetooth: arg1 ≠ 0 = sonando (app com.tw.bt)
+    private val LISTEN = intArrayOf(MSG_BT_PLAY, 0x201, MSG_VOLUME, MSG_LIGHTS, 0x301)
     private val OTHERS = listOf("com.radiocoche.radio", "com.radiocoche.musica")
 
     /** true = encendidas; false = apagadas; null = aún no se sabe. */
     var on by mutableStateOf<Boolean?>(null)
+        private set
+
+    /** Volumen general de la unidad (0–30), el del mando. null = aún no se sabe. */
+    var volume: Int? = null
+        private set
+
+    /** La música Bluetooth está sonando (según la unidad). null = aún no se sabe. */
+    var btPlaying: Boolean? = null
         private set
 
     /** Estado de la conexión, para la línea de estado de la ventana de radares. */
@@ -80,7 +90,11 @@ object CarLights {
             }
             cls.getMethod("start").invoke(util)
             val handler = Handler(Looper.getMainLooper()) { m ->
-                if (m.what == MSG_LIGHTS) set(m.arg1 != 0, fromMcu = true)
+                when (m.what) {
+                    MSG_LIGHTS -> set(m.arg1 != 0, fromMcu = true)
+                    MSG_VOLUME -> if (m.arg2 in 1..100 && m.arg1 in 0..m.arg2) volume = m.arg1
+                    MSG_BT_PLAY -> btPlaying = m.arg1 != 0
+                }
                 true
             }
             cls.getMethod("addHandler", String::class.java, Handler::class.java).invoke(util, "LauncherCoche", handler)
@@ -129,6 +143,12 @@ object CarLights {
      * La usa el aviso de radares para quitar y devolver el sonido de la radio al instante.
      * Devuelve false si no hay conexión (fuera de la unidad).
      */
+    fun write(what: Int, a1: Int): Boolean {
+        val util = tw ?: return false
+        val m = write2 ?: return false
+        return runCatching { m.invoke(util, what, a1) }.isSuccess
+    }
+
     fun write(what: Int, a1: Int, a2: Int): Boolean {
         val util = tw ?: return false
         val m = write3 ?: return false
