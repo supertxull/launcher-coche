@@ -321,6 +321,7 @@ private fun Dock(h: HomeState) {
         DockButton(Ic.Radio, "Radio", active = h.source == Source.RADIO) { h.openRadio() }
         DockButton(Ic.Note, "Música", active = h.source == Source.MUSICA) { h.openMusic() }
         DockButton(Ic.Nav, "Navegador", onLongClick = { h.showNavChooser = true }) { h.openNavigator() }
+        DockButton(Ic.Car, "Android Auto") { h.openAndroidAuto() }
         DockButton(Ic.Phone, "Teléfono") { h.openPhone() }
         DockButton(Ic.Apps, "Aplicaciones") { h.showApps = true }
         DockButton(Ic.Gear, "Ajustes", onLongClick = { h.openAndroidSettings() }) { h.openSettings() }
@@ -336,7 +337,7 @@ private fun RowScope.DockButton(
     onClick: () -> Unit,
 ) {
     val p = Tema.p
-    // Botón redondo centrado en su hueco: los seis quedan repartidos a lo ancho de la barra.
+    // Botón redondo centrado en su hueco: los siete quedan repartidos a lo ancho de la barra.
     Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
         CarButton(
             Modifier.size(58.dp),

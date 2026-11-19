@@ -133,6 +133,10 @@ class HomeState(private val ctx: Context) {
         Apps.open(ctx, Pkg.MUSICA, Pkg.MUSICA_FABRICA)
     }
 
+    fun openAndroidAuto() {
+        Apps.open(ctx, Pkg.ZLINK)
+    }
+
     fun openPhone() {
         Apps.open(ctx, Pkg.TELEFONO)
     }

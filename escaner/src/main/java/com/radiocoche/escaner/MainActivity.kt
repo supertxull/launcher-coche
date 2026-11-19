@@ -261,9 +261,17 @@ class MainActivity : Activity() {
                 }
             }
         }
+        // Volúmenes de Android (para saber si el mando de volumen de la unidad los mueve).
+        runCatching {
+            val am = getSystemService(AUDIO_SERVICE) as android.media.AudioManager
+            val names = listOf("llamada", "sistema", "timbre", "música", "alarma", "notificación", "bluetooth", "sistema forzado", "tonos", "tts", "accesibilidad")
+            for (st in names.indices) runCatching {
+                newSets["volumen/${names[st]}"] = "${am.getStreamVolume(st)}/${am.getStreamMaxVolume(st)}"
+            }
+        }
         if (!first) {
             for ((k, v) in newProps) if (props[k] != v) ui { record("PROP $k", "${props[k] ?: "(nueva)"} → $v") }
-            for ((k, v) in newSets) if (sets[k] != v) ui { record("AJUSTE $k", "${sets[k] ?: "(nuevo)"} → $v") }
+            for ((k, v) in newSets) if (sets[k] != v) ui { record(if (k.startsWith("volumen/")) "VOLUMEN ${k.removePrefix("volumen/")}" else "AJUSTE $k", "${sets[k] ?: "(nuevo)"} → $v") }
         }
         props = newProps
         sets = newSets

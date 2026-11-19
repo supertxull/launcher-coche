@@ -315,6 +315,15 @@ private fun ColumnScope.RadarMain(h: HomeState) {
         status, color = if (h.toast.isNotEmpty()) p.accent else p.muted, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, fontFamily = Tema.body,
         textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth(),
     )
+    val lightsText = "Luces: " + when (CarLights.on) {
+        true -> "encendidas"
+        false -> "apagadas"
+        null -> "sin aviso todavía"
+    } + " · conexión: " + CarLights.link
+    Text(
+        lightsText, color = p.dim, fontSize = 15.sp, fontFamily = Tema.body,
+        textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth(),
+    )
 }
 
 private fun updatedText(t: Long): String {

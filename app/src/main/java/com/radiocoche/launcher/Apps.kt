@@ -17,6 +17,8 @@ object Pkg {
     const val MUSICA = "com.radiocoche.musica"
     const val MUSICA_FABRICA = "com.tw.music"
     const val TELEFONO = "com.tw.bt"
+    /** Tlink5 (Zlink): Android Auto y CarPlay. */
+    const val ZLINK = "com.zjinnova.zlink"
     const val AJUSTES_UNIDAD = "com.dofun.carsetting"
 }
 
