@@ -40,7 +40,11 @@ object CarLights {
         private set
 
     /** La música Bluetooth está sonando (según la unidad). null = aún no se sabe. */
-    var btPlaying: Boolean? = null
+    var btPlaying by mutableStateOf<Boolean?>(null)
+        private set
+
+    /** Título de la canción Bluetooth según la unidad (mensaje 0x9F00). */
+    var btTitle by mutableStateOf("")
         private set
 
     /** Estado de la conexión, para la línea de estado de la ventana de radares. */
@@ -93,7 +97,18 @@ object CarLights {
                 when (m.what) {
                     MSG_LIGHTS -> set(m.arg1 != 0, fromMcu = true)
                     MSG_VOLUME -> if (m.arg2 in 1..100 && m.arg1 in 0..m.arg2) volume = m.arg1
-                    MSG_NOW -> btPlaying = m.arg1 == 8 && m.arg2 == 1
+                    MSG_NOW -> {
+                        btPlaying = m.arg1 == 8 && m.arg2 == 1
+                        if (m.arg1 == 8) {
+                            val o = m.obj
+                            val t = when (o) {
+                                is String -> o
+                                is ByteArray -> String(o, Charsets.UTF_8)
+                                else -> null
+                            }
+                            if (t != null) btTitle = t.trim { it <= ' ' || it == '\u0000' }
+                        }
+                    }
                 }
                 true
             }

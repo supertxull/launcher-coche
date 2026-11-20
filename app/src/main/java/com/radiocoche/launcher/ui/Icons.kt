@@ -28,6 +28,7 @@ private fun icon(name: String, vararg parts: P): ImageVector {
 
 /** Iconos dibujados a mano, los mismos del diseño. */
 object Ic {
+    val Bluetooth = icon("bluetooth", P("M7 7l10 10-5 5V2l5 5L7 17", w = 2.2f))
     val Prev = icon("prev", P("M5 5v14", w = 2.4f), P("M19 5L9 12l10 7z", fill = true, w = 2.4f))
     val Next = icon("next", P("M5 5l10 7-10 7z", fill = true, w = 2.4f), P("M19 5v14", w = 2.4f))
     val Play = icon("play", P("M7 4l13 8-13 8z", fill = true, stroke = false))

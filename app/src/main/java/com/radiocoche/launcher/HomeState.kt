@@ -16,7 +16,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-enum class Source { MUSICA, RADIO }
+enum class Source { MUSICA, RADIO, BT }
 
 /** Pantallas de la ventana de radares. */
 enum class RadarView { MAIN, LIMIT, LIST, EDIT }
@@ -32,10 +32,11 @@ class HomeState(private val ctx: Context) {
     val speed = Speed(ctx)
     val music = MusicLink(ctx)
     val radio = RadioLink(ctx)
+    val bt = BtLink(ctx)
 
     /** Qué se ve en el panel derecho: lo último que se usó. */
     var source by mutableStateOf(
-        if (prefs.getString("source", "") == Source.RADIO.name) Source.RADIO else Source.MUSICA
+        Source.entries.firstOrNull { it.name == prefs.getString("source", "") } ?: Source.MUSICA
     )
         private set
 
@@ -75,6 +76,7 @@ class HomeState(private val ctx: Context) {
     init {
         music.onStartedPlaying = { select(Source.MUSICA) }
         radio.onRadioFront = { select(Source.RADIO) }
+        bt.onStartedPlaying = { select(Source.BT) }
         tick()
     }
 
@@ -91,6 +93,8 @@ class HomeState(private val ctx: Context) {
         speed.start()
         music.connect()
         radio.query()
+        bt.start()
+        bt.query()
         tick()
     }
 
@@ -105,6 +109,7 @@ class HomeState(private val ctx: Context) {
         date = dateFormat.format(now)
         speed.tick()
         music.tick()
+        bt.tick()
         if (toast.isNotEmpty() && SystemClock.elapsedRealtime() > toastUntil) toast = ""
         if (RadarStore.message.isNotEmpty()) {
             showToast(RadarStore.message)
@@ -171,6 +176,20 @@ class HomeState(private val ctx: Context) {
     }
 
     // ------------------------------------------------------------ mandos del panel
+
+    /** Abre Música directamente en la pantalla de Bluetooth. */
+    fun openBluetooth() {
+        select(Source.BT)
+        val i = ctx.packageManager.getLaunchIntentForPackage(Pkg.MUSICA)
+        if (i != null) {
+            runCatching { ctx.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).putExtra("source", "BT")) }
+        } else {
+            Apps.open(ctx, Pkg.TELEFONO)
+        }
+    }
+
+    fun radioPrevious() = radio.previous()
+    fun radioNext() = radio.next()
 
     fun musicPlayPause() { if (!music.playPause()) openMusic() }
     fun musicNext() { if (!music.next()) openMusic() }

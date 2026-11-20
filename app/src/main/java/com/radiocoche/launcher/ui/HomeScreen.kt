@@ -1,6 +1,9 @@
 package com.radiocoche.launcher.ui
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -32,11 +35,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -59,6 +65,7 @@ import com.radiocoche.launcher.Source
 import com.radiocoche.launcher.radar.RadarState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
@@ -88,7 +95,11 @@ fun HomeScreen(h: HomeState) {
                         .border(1.dp, p.border, RoundedCornerShape(20.dp))
                         .padding(horizontal = 22.dp, vertical = 20.dp),
                 ) {
-                    if (h.source == Source.RADIO) RadioPanel(h) else MusicPanel(h)
+                    when (h.source) {
+                        Source.RADIO -> RadioPanel(h)
+                        Source.BT -> BtPanel(h)
+                        Source.MUSICA -> MusicPanel(h)
+                    }
                 }
                 Dock(h)
             }
@@ -256,10 +267,11 @@ private fun clock(ms: Long): String {
 private fun RadioPanel(h: HomeState) {
     val p = Tema.p
     val r = h.radio
+    val scope = rememberCoroutineScope()
+    val offset = remember { Animatable(0f) }
 
-    // Solo la emisora y su frecuencia; al tocar se abre la Radio.
-    Column(Modifier.fillMaxSize().tap { h.openRadio() }) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(
                 r.bank.ifEmpty { "FM" },
                 color = p.accent, fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = Tema.body,
@@ -268,11 +280,49 @@ private fun RadioPanel(h: HomeState) {
                     .border(2.dp, p.accent, RoundedCornerShape(8.dp))
                     .padding(horizontal = 11.dp, vertical = 2.dp),
             )
-            Spacer(Modifier.weight(1f))
-            Text("RADIO", color = p.muted, fontSize = 15.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp, fontFamily = Tema.body)
+            Text(
+                if (r.preset >= 0) "RADIO · P${r.preset + 1}" else "RADIO",
+                color = p.muted, fontSize = 15.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp, fontFamily = Tema.body,
+            )
         }
+        // Emisora: tocar abre la Radio; deslizar a la izquierda = presintonía siguiente, a la derecha = anterior.
         Column(
-            Modifier.weight(1f).fillMaxWidth(),
+            Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .tap { h.openRadio() }
+                .pointerInput(Unit) {
+                    val limit = 90.dp.toPx()
+                    detectHorizontalDragGestures(
+                        onDragEnd = {
+                            val dx = offset.value
+                            val dir = when {
+                                dx < -limit -> 1
+                                dx > limit -> -1
+                                else -> 0
+                            }
+                            scope.launch {
+                                if (dir == 0) {
+                                    offset.animateTo(0f, tween(160))
+                                } else {
+                                    offset.animateTo(-dir * size.width.toFloat(), tween(150))
+                                    if (dir > 0) h.radioNext() else h.radioPrevious()
+                                    offset.snapTo(dir * size.width * 0.6f)
+                                    offset.animateTo(0f, tween(170))
+                                }
+                            }
+                        },
+                        onDragCancel = { scope.launch { offset.animateTo(0f, tween(160)) } },
+                    ) { change, amount ->
+                        change.consume()
+                        scope.launch { offset.snapTo(offset.value + amount) }
+                    }
+                }
+                .graphicsLayer {
+                    translationX = offset.value
+                    alpha = (1f - kotlin.math.abs(offset.value) / (size.width.coerceAtLeast(1f))).coerceIn(0.2f, 1f)
+                },
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
@@ -299,6 +349,81 @@ private fun RadioPanel(h: HomeState) {
                 }
             }
         }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            RectButton(Modifier.weight(1f), "Presintonía anterior", Ic.Prev) { h.radioPrevious() }
+            RectButton(Modifier.weight(1f), "Presintonía siguiente", Ic.Next) { h.radioNext() }
+        }
+    }
+}
+
+// ------------------------------------------------------------------ panel de Bluetooth
+
+@Composable
+private fun BtPanel(h: HomeState) {
+    val p = Tema.p
+    val b = h.bt
+    val hasSong = b.title.isNotEmpty()
+
+    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            CarIcon(Ic.Bluetooth, 22.dp, p.accent, "Bluetooth")
+            Text(
+                b.phone.ifEmpty { "BLUETOOTH" },
+                color = p.accent, fontSize = 17.sp, fontWeight = FontWeight.Bold, fontFamily = Tema.body,
+                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
+            )
+        }
+
+        Row(
+            Modifier.fillMaxWidth().tap { h.openBluetooth() },
+            horizontalArrangement = Arrangement.spacedBy(20.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                Modifier
+                    .size(210.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(p.raised)
+                    .border(1.dp, p.border2, RoundedCornerShape(14.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                CarIcon(Ic.Bluetooth, 84.dp, p.accent)
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    if (hasSong) b.title else "Música del móvil",
+                    color = p.text, fontSize = 28.sp, lineHeight = 32.sp, fontWeight = FontWeight.SemiBold,
+                    fontFamily = Tema.body, maxLines = 3, overflow = TextOverflow.Ellipsis,
+                )
+                if (b.artist.isNotEmpty() || !hasSong) {
+                    Text(
+                        if (hasSong) b.artist else "Pon música en el móvil",
+                        color = p.muted, fontSize = 21.sp, fontFamily = Tema.body,
+                        maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            val fraction = if (b.durationMs > 0) (b.positionMs.toFloat() / b.durationMs).coerceIn(0f, 1f) else 0f
+            Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(p.track)) {
+                Box(Modifier.fillMaxWidth(fraction).fillMaxHeight().background(p.accent))
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(if (b.durationMs > 0) clock(b.positionMs) else "", color = p.muted, fontSize = 17.sp, fontFamily = Tema.body)
+                Text(if (b.durationMs > 0) clock(b.durationMs) else "", color = p.muted, fontSize = 17.sp, fontFamily = Tema.body)
+            }
+        }
+
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            RectButton(Modifier.weight(1f), "Anterior", Ic.Prev) { b.previous() }
+            RectButton(
+                Modifier.weight(1.3f), if (b.playing) "Pausa" else "Reproducir",
+                if (b.playing) Ic.Pause else Ic.Play, active = true, iconSize = 30.dp,
+            ) { b.playPause() }
+            RectButton(Modifier.weight(1f), "Siguiente", Ic.Next) { b.next() }
+        }
     }
 }
 
@@ -319,7 +444,7 @@ private fun Dock(h: HomeState) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         DockButton(Ic.Radio, "Radio", active = h.source == Source.RADIO) { h.openRadio() }
-        DockButton(Ic.Note, "Música", active = h.source == Source.MUSICA) { h.openMusic() }
+        DockButton(Ic.Note, "Música", active = h.source != Source.RADIO) { if (h.source == Source.BT) h.openBluetooth() else h.openMusic() }
         DockButton(Ic.Nav, "Navegador", onLongClick = { h.showNavChooser = true }) { h.openNavigator() }
         DockButton(Ic.Car, "Android Auto") { h.openAndroidAuto() }
         DockButton(Ic.Phone, "Teléfono") { h.openPhone() }
