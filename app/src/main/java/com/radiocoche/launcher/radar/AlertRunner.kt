@@ -103,8 +103,8 @@ class AlertRunner(private val ctx: Context) {
             runCatching { audio.requestAudioFocus(null, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT) }
         }
         radio("mute")
+        silenceMusic(true)
         loud()
-        btPause()
     }
 
     private fun unmute() {
@@ -119,14 +119,13 @@ class AlertRunner(private val ctx: Context) {
         }
         radio("unmute")
         restoreVolume()
-        btResume()
+        silenceMusic(false)
     }
 
     // ------------------------------------------------------------------ volumen y Bluetooth
 
     /** Volumen general que había antes del aviso (para devolverlo); null = no se tocó. */
     private var savedVolume: Int? = null
-    private var btWasPlaying = false
 
     /**
      * Pone el volumen general de la unidad (el del mando, 0–30) en el nivel elegido para los avisos,
@@ -146,18 +145,18 @@ class AlertRunner(private val ctx: Context) {
     }
 
     /**
-     * La música Bluetooth la reproduce la app de fábrica (com.tw.bt) y no se para con el foco de sonido:
-     * se pausa con su orden de play/pausa (20, 0) y se reanuda al acabar.
+     * Silencia la música mientras suena el aviso (en esta unidad el foco de sonido de Android no la para):
+     *  - Música (nuestra app): orden "com.radiocoche.musica.CMD" mute/unmute (baja su volumen a 0, sigue avanzando).
+     *  - Música por Bluetooth (app de fábrica com.tw.bt): orden "com.tw.launcher.btmsg" msg 11 = silenciar, 12 = quitar silencio.
+     * Si la app no está en marcha la orden no hace nada.
      */
-    private fun btPause() {
-        btWasPlaying = false
-        if (CarLights.btPlaying == true && CarLights.write(MSG_BT, 0)) btWasPlaying = true
-    }
-
-    private fun btResume() {
-        if (!btWasPlaying) return
-        btWasPlaying = false
-        CarLights.write(MSG_BT, 0)
+    private fun silenceMusic(on: Boolean) {
+        runCatching {
+            ctx.sendBroadcast(Intent("com.radiocoche.musica.CMD").setPackage("com.radiocoche.musica").putExtra("cmd", if (on) "mute" else "unmute"))
+        }
+        runCatching {
+            ctx.sendBroadcast(Intent("com.tw.launcher.btmsg").setPackage("com.tw.bt").putExtra("msg", if (on) 11 else 12))
+        }
     }
 
     /**
@@ -214,7 +213,5 @@ class AlertRunner(private val ctx: Context) {
         const val RADIO_AUDIO = 192
         /** Volumen general de la unidad: (0x203, 1, nivel 0–30). */
         const val MSG_VOLUME = 0x203
-        /** Órdenes de la música Bluetooth: 0 = play/pausa, 2 = siguiente, 3 = anterior. */
-        const val MSG_BT = 20
     }
 }

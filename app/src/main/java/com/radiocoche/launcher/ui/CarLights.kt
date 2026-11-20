@@ -27,8 +27,8 @@ object CarLights {
     private const val MSG_LIGHTS = 0x204
     const val ACTION = "com.radiocoche.LIGHTS"
     private const val MSG_VOLUME = 0x203   // volumen general: arg1 = nivel (0–30), arg2 = máximo
-    private const val MSG_BT_PLAY = 0x15    // música Bluetooth: arg1 ≠ 0 = sonando (app com.tw.bt)
-    private val LISTEN = intArrayOf(MSG_BT_PLAY, 0x201, MSG_VOLUME, MSG_LIGHTS, 0x301)
+    private const val MSG_NOW = 0x9F00      // lo que suena: arg1 = fuente (8 = Bluetooth), arg2 = 1 sonando / 0 en pausa, obj = título
+    private val LISTEN = intArrayOf(0x201, MSG_VOLUME, MSG_LIGHTS, 0x301, MSG_NOW)
     private val OTHERS = listOf("com.radiocoche.radio", "com.radiocoche.musica")
 
     /** true = encendidas; false = apagadas; null = aún no se sabe. */
@@ -93,7 +93,7 @@ object CarLights {
                 when (m.what) {
                     MSG_LIGHTS -> set(m.arg1 != 0, fromMcu = true)
                     MSG_VOLUME -> if (m.arg2 in 1..100 && m.arg1 in 0..m.arg2) volume = m.arg1
-                    MSG_BT_PLAY -> btPlaying = m.arg1 != 0
+                    MSG_NOW -> btPlaying = m.arg1 == 8 && m.arg2 == 1
                 }
                 true
             }
