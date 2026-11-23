@@ -29,7 +29,7 @@ object CarLights {
     private const val MSG_VOLUME = 0x203   // volumen general: arg1 = nivel (0–30), arg2 = máximo
     private const val MSG_NOW = 0x9F00      // lo que suena: arg1 = fuente (8 = Bluetooth), arg2 = 1 sonando / 0 en pausa, obj = título
     private val LISTEN = intArrayOf(0x201, MSG_VOLUME, MSG_LIGHTS, 0x301, MSG_NOW)
-    private val OTHERS = listOf("com.radiocoche.radio", "com.radiocoche.musica")
+    private val OTHERS = listOf("com.radiocoche.radio", "com.radiocoche.musica", "com.radiocoche.telefono")
 
     /** true = encendidas; false = apagadas; null = aún no se sabe. */
     var on by mutableStateOf<Boolean?>(null)

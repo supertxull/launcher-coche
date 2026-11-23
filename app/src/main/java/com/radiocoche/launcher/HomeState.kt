@@ -143,7 +143,8 @@ class HomeState(private val ctx: Context) {
     }
 
     fun openPhone() {
-        Apps.open(ctx, Pkg.TELEFONO)
+        val own = ctx.packageManager.getLaunchIntentForPackage(Pkg.TELEFONO_PROPIO) != null
+        Apps.open(ctx, if (own) Pkg.TELEFONO_PROPIO else Pkg.TELEFONO)
     }
 
     fun openSettings() {
