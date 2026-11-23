@@ -68,6 +68,17 @@ class RadarService : Service() {
             handler.postDelayed({ if (RadarState.alert == a) RadarState.alert = null }, 6000)
         }
         handler.postDelayed(updateCheck, 20 * 1000L)
+        // El Teléfono pide silencio mientras hay una llamada (sonando, marcando o en curso).
+        androidx.core.content.ContextCompat.registerReceiver(
+            this, silenceReceiver, android.content.IntentFilter(ACTION_SILENCE),
+            androidx.core.content.ContextCompat.RECEIVER_EXPORTED,
+        )
+    }
+
+    private val silenceReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(c: android.content.Context, i: Intent) {
+            runner.silence(i.getBooleanExtra("on", false))
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -77,6 +88,7 @@ class RadarService : Service() {
 
     override fun onDestroy() {
         handler.removeCallbacksAndMessages(null)
+        runCatching { unregisterReceiver(silenceReceiver) }
         if (listening) {
             val lm = getSystemService(Context.LOCATION_SERVICE) as LocationManager
             runCatching { lm.removeUpdates(listener) }
@@ -123,6 +135,9 @@ class RadarService : Service() {
         if (Build.VERSION.SDK_INT >= 26) Notification.Builder(this, CHANNEL) else Notification.Builder(this)
 
     companion object {
+        /** Aviso del Teléfono: extra "on" = true silencia las fuentes, false las devuelve. */
+        const val ACTION_SILENCE = "com.radiocoche.launcher.SILENCE"
+
         private const val CHANNEL = "radares"
         private const val ID = 7
 

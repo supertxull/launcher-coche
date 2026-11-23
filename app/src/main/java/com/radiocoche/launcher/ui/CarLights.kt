@@ -28,7 +28,9 @@ object CarLights {
     const val ACTION = "com.radiocoche.LIGHTS"
     private const val MSG_VOLUME = 0x203   // volumen general: arg1 = nivel (0–30), arg2 = máximo
     private const val MSG_NOW = 0x9F00      // lo que suena: arg1 = fuente (8 = Bluetooth), arg2 = 1 sonando / 0 en pausa, obj = título
-    private val LISTEN = intArrayOf(0x201, MSG_VOLUME, MSG_LIGHTS, 0x301, MSG_NOW)
+    /** Fuente de sonido activa de la unidad: arg1 = 1 radio · 3 música de Android · 8 música Bluetooth… */
+    private const val MSG_SOURCE_NOW = 0x9E08
+    private val LISTEN = intArrayOf(0x201, MSG_VOLUME, MSG_LIGHTS, 0x301, MSG_NOW, MSG_SOURCE_NOW)
     private val OTHERS = listOf("com.radiocoche.radio", "com.radiocoche.musica", "com.radiocoche.telefono")
 
     /** true = encendidas; false = apagadas; null = aún no se sabe. */
@@ -41,6 +43,10 @@ object CarLights {
 
     /** La música Bluetooth está sonando (según la unidad). null = aún no se sabe. */
     var btPlaying by mutableStateOf<Boolean?>(null)
+        private set
+
+    /** Fuente de sonido activa según la unidad (1 radio, 3 música, 8 Bluetooth). null = aún no se sabe. */
+    var source by mutableStateOf<Int?>(null)
         private set
 
     /** Título de la canción Bluetooth según la unidad (mensaje 0x9F00). */
@@ -97,8 +103,14 @@ object CarLights {
                 when (m.what) {
                     MSG_LIGHTS -> set(m.arg1 != 0, fromMcu = true)
                     MSG_VOLUME -> if (m.arg2 in 1..100 && m.arg1 in 0..m.arg2) volume = m.arg1
+                    MSG_SOURCE_NOW -> source = m.arg1 and 0x7F
                     MSG_NOW -> {
+                        val was = btPlaying == true
                         btPlaying = m.arg1 == 8 && m.arg2 == 1
+                        // Play en el móvil: la unidad no cambia sola de fuente; se le pide el Bluetooth (fuente 8).
+                        if (btPlaying == true && !was && source != 8) {
+                            runCatching { write3?.invoke(tw, 0x9E11, 192, 8) }
+                        }
                         if (m.arg1 == 8) {
                             val o = m.obj
                             val t = when (o) {

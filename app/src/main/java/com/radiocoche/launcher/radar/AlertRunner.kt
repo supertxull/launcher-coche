@@ -150,6 +150,19 @@ class AlertRunner(private val ctx: Context) {
      *  - Música por Bluetooth (app de fábrica com.tw.bt): orden "com.tw.launcher.btmsg" msg 11 = silenciar, 12 = quitar silencio.
      * Si la app no está en marcha la orden no hace nada.
      */
+    private var radioMuted = false
+
+    /** Silencio sin pitido ni cambio de volumen (llamadas del Teléfono). */
+    fun silence(on: Boolean) {
+        if (on) {
+            radio("mute")
+            silenceMusic(true)
+        } else {
+            silenceMusic(false)
+            radio("unmute")
+        }
+    }
+
     private fun silenceMusic(on: Boolean) {
         runCatching {
             ctx.sendBroadcast(Intent("com.radiocoche.musica.CMD").setPackage("com.radiocoche.musica").putExtra("cmd", if (on) "mute" else "unmute"))
@@ -167,8 +180,15 @@ class AlertRunner(private val ctx: Context) {
      * y cerrarla enseguida: el sonido tardaba en volver.
      */
     private fun radio(cmd: String) {
-        val source = ctx.getSharedPreferences("launcher", Context.MODE_PRIVATE).getString("source", "")
-        if (source != "RADIO") return
+        // Solo si la radio es la fuente que suena ahora (si no, quitarle el silencio la haría volver).
+        val src = CarLights.source
+        if (src != null) {
+            if (src != SRC_RADIO && !radioMuted) return
+        } else {
+            val last = ctx.getSharedPreferences("launcher", Context.MODE_PRIVATE).getString("source", "")
+            if (last != "RADIO" && !radioMuted) return
+        }
+        if (cmd == "mute") radioMuted = true else if (!radioMuted) return else radioMuted = false
         val on = cmd == "unmute"
         if (CarLights.write(MSG_SOURCE, RADIO_AUDIO, if (on) 1 else 0)) return
         // Sin conexión propia: se lo pide a la Radio (Radio 0.20+).
@@ -213,5 +233,6 @@ class AlertRunner(private val ctx: Context) {
         const val RADIO_AUDIO = 192
         /** Volumen general de la unidad: (0x203, 1, nivel 0–30). */
         const val MSG_VOLUME = 0x203
+        const val SRC_RADIO = 1
     }
 }
