@@ -38,6 +38,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
@@ -285,30 +289,33 @@ private fun RadioPanel(h: HomeState) {
                 color = p.muted, fontSize = 15.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp, fontFamily = Tema.body,
             )
         }
-        // Emisora: tocar abre la Radio; deslizar a la izquierda = presintonía siguiente, a la derecha = anterior.
-        Column(
+        // Emisora: deslizar a la izquierda = presintonía siguiente, a la derecha = anterior; tocar abre la Radio.
+        // El arrastre va en la caja de fuera y el toque en la de dentro (como en Música), para que no se estorben.
+        var widthPx by remember { mutableStateOf(1f) }
+        val tracker = remember { VelocityTracker() }
+        Box(
             Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .tap { h.openRadio() }
+                .onSizeChanged { widthPx = it.width.toFloat().coerceAtLeast(1f) }
                 .pointerInput(Unit) {
-                    val limit = 90.dp.toPx()
                     detectHorizontalDragGestures(
+                        onDragStart = { tracker.resetTracking() },
                         onDragEnd = {
-                            val dx = offset.value
-                            val dir = when {
-                                dx < -limit -> 1
-                                dx > limit -> -1
-                                else -> 0
-                            }
+                            val v = tracker.calculateVelocity().x
                             scope.launch {
+                                val dx = offset.value
+                                val dir = when {
+                                    dx < -widthPx * 0.18f || (v < -900f && dx < 0) -> 1
+                                    dx > widthPx * 0.18f || (v > 900f && dx > 0) -> -1
+                                    else -> 0
+                                }
                                 if (dir == 0) {
                                     offset.animateTo(0f, tween(160))
                                 } else {
-                                    offset.animateTo(-dir * size.width.toFloat(), tween(150))
+                                    offset.animateTo(-dir * widthPx, tween(150))
                                     if (dir > 0) h.radioNext() else h.radioPrevious()
-                                    offset.snapTo(dir * size.width * 0.6f)
+                                    offset.snapTo(dir * widthPx * 0.6f)
                                     offset.animateTo(0f, tween(170))
                                 }
                             }
@@ -316,13 +323,19 @@ private fun RadioPanel(h: HomeState) {
                         onDragCancel = { scope.launch { offset.animateTo(0f, tween(160)) } },
                     ) { change, amount ->
                         change.consume()
+                        tracker.addPosition(change.uptimeMillis, change.position)
                         scope.launch { offset.snapTo(offset.value + amount) }
                     }
-                }
+                },
+        ) {
+        Column(
+            Modifier
+                .fillMaxSize()
                 .graphicsLayer {
                     translationX = offset.value
-                    alpha = (1f - kotlin.math.abs(offset.value) / (size.width.coerceAtLeast(1f))).coerceIn(0.2f, 1f)
-                },
+                    alpha = (1f - kotlin.math.abs(offset.value) / 900f).coerceIn(0.3f, 1f)
+                }
+                .tap { h.openRadio() },
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
@@ -348,6 +361,7 @@ private fun RadioPanel(h: HomeState) {
                     Text(r.unit, color = p.accent, fontSize = 28.sp, fontFamily = Tema.body)
                 }
             }
+        }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             RectButton(Modifier.weight(1f), "Presintonía anterior", Ic.Prev) { h.radioPrevious() }
