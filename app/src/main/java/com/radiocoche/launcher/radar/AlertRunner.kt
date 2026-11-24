@@ -30,6 +30,7 @@ class AlertRunner(private val ctx: Context) {
     private val overlay = FlashOverlay(ctx)
     private var focus: AudioFocusRequest? = null
     private var muted = false
+    private val beepHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private val tone: ShortArray = makeTone()
 
     /** Hay destellos en curso. */
@@ -74,6 +75,8 @@ class AlertRunner(private val ctx: Context) {
 
     /** Salida de un tramo: un pitido. */
     fun sectionEnd() {
+        if (flashing) return // ya hay un aviso sonando
+        main.removeCallbacksAndMessages(null)
         mute()
         main.postDelayed({ beep() }, 150)
         main.postDelayed({ unmute() }, 410)
@@ -102,9 +105,14 @@ class AlertRunner(private val ctx: Context) {
             @Suppress("DEPRECATION")
             runCatching { audio.requestAudioFocus(null, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT) }
         }
-        radio("mute")
-        silenceMusic(true)
-        loud()
+        alertOn = true
+        if (!callOn) {
+            radio("mute")
+            btSilence(true)
+            loud()
+        }
+        applyMusic()
+        save()
     }
 
     private fun unmute() {
@@ -117,9 +125,12 @@ class AlertRunner(private val ctx: Context) {
             @Suppress("DEPRECATION")
             runCatching { audio.abandonAudioFocus(null) }
         }
-        radio("unmute")
+        alertOn = false
         restoreVolume()
-        silenceMusic(false)
+        radio("unmute")
+        btSilence(false)
+        applyMusic()
+        save()
     }
 
     // ------------------------------------------------------------------ volumen y Bluetooth
@@ -144,32 +155,77 @@ class AlertRunner(private val ctx: Context) {
         CarLights.write(MSG_VOLUME, 1, v)
     }
 
-    /**
-     * Silencia la música mientras suena el aviso (en esta unidad el foco de sonido de Android no la para):
-     *  - Música (nuestra app): orden "com.radiocoche.musica.CMD" mute/unmute (baja su volumen a 0, sigue avanzando).
-     *  - Música por Bluetooth (app de fábrica com.tw.bt): orden "com.tw.launcher.btmsg" msg 11 = silenciar, 12 = quitar silencio.
-     * Si la app no está en marcha la orden no hace nada.
-     */
+    // Motivos de silencio, por separado para que un aviso de radar no devuelva el sonido en plena llamada
+    // ni una llamada que empieza lo haga a mitad de un aviso.
+    private var alertOn = false
+    private var callOn = false
     private var radioMuted = false
+    private var musicMuted = false
+    private var btMuted = false
 
-    /** Silencio sin pitido ni cambio de volumen (llamadas del Teléfono). */
+    /** El Teléfono avisa de que hay (o ya no hay) llamada: solo se calla nuestra Música. */
     fun silence(on: Boolean) {
+        callOn = on
         if (on) {
-            radio("mute")
-            silenceMusic(true)
-        } else {
-            silenceMusic(false)
+            // Si había un aviso en curso, se devuelve lo que tocaba solo al aviso (la unidad ya pasa a la llamada).
+            restoreVolume()
             radio("unmute")
+            btSilence(false)
+        }
+        applyMusic()
+        save()
+    }
+
+    /**
+     * Música (nuestra app): orden "com.radiocoche.musica.CMD" mute/unmute (su volumen a 0, sigue avanzando).
+     * En esta unidad el foco de sonido de Android no la para.
+     */
+    private fun applyMusic() {
+        val want = alertOn || callOn
+        if (want == musicMuted) return
+        musicMuted = want
+        runCatching {
+            ctx.sendBroadcast(Intent("com.radiocoche.musica.CMD").setPackage("com.radiocoche.musica").putExtra("cmd", if (want) "mute" else "unmute"))
         }
     }
 
-    private fun silenceMusic(on: Boolean) {
-        runCatching {
-            ctx.sendBroadcast(Intent("com.radiocoche.musica.CMD").setPackage("com.radiocoche.musica").putExtra("cmd", if (on) "mute" else "unmute"))
-        }
+    /** Música por Bluetooth (app de fábrica com.tw.bt): "com.tw.launcher.btmsg" msg 11 = silenciar, 12 = quitar. Solo en avisos. */
+    private fun btSilence(on: Boolean) {
+        if (on == btMuted) return
+        btMuted = on
         runCatching {
             ctx.sendBroadcast(Intent("com.tw.launcher.btmsg").setPackage("com.tw.bt").putExtra("msg", if (on) 11 else 12))
         }
+    }
+
+    /** Se guarda lo que hay que devolver, por si el servicio muere a mitad (se recupera al arrancar). */
+    private fun save() {
+        ctx.getSharedPreferences("silencio", Context.MODE_PRIVATE).edit()
+            .putBoolean("radio", radioMuted).putBoolean("music", musicMuted).putBoolean("bt", btMuted)
+            .putInt("volume", savedVolume ?: -1)
+            .apply()
+    }
+
+    /** Al arrancar el servicio: devuelve lo que se quedó silenciado o subido si el proceso murió. */
+    fun recover() {
+        val pr = ctx.getSharedPreferences("silencio", Context.MODE_PRIVATE)
+        val vol = pr.getInt("volume", -1)
+        if (vol >= 0) CarLights.write(MSG_VOLUME, 1, vol)
+        if (pr.getBoolean("radio", false)) {
+            radioMuted = true
+            radio("unmute")
+        }
+        if (pr.getBoolean("music", false)) {
+            musicMuted = true
+            alertOn = false
+            callOn = false
+            applyMusic()
+        }
+        if (pr.getBoolean("bt", false)) {
+            btMuted = true
+            btSilence(false)
+        }
+        pr.edit().clear().apply()
     }
 
     /**
@@ -180,15 +236,16 @@ class AlertRunner(private val ctx: Context) {
      * y cerrarla enseguida: el sonido tardaba en volver.
      */
     private fun radio(cmd: String) {
-        // Solo si la radio es la fuente que suena ahora (si no, quitarle el silencio la haría volver).
-        val src = CarLights.source
-        if (src != null) {
-            if (src != SRC_RADIO && !radioMuted) return
-        } else {
+        // Solo si lo último que sonaba es la radio (si no, quitarle el silencio la haría volver).
+        if (cmd == "mute") {
+            if (radioMuted) return
             val last = ctx.getSharedPreferences("launcher", Context.MODE_PRIVATE).getString("source", "")
-            if (last != "RADIO" && !radioMuted) return
+            if (last != "RADIO") return
+            radioMuted = true
+        } else {
+            if (!radioMuted) return
+            radioMuted = false
         }
-        if (cmd == "mute") radioMuted = true else if (!radioMuted) return else radioMuted = false
         val on = cmd == "unmute"
         if (CarLights.write(MSG_SOURCE, RADIO_AUDIO, if (on) 1 else 0)) return
         // Sin conexión propia: se lo pide a la Radio (Radio 0.20+).
@@ -213,7 +270,8 @@ class AlertRunner(private val ctx: Context) {
                 .build()
             track.write(tone, 0, tone.size)
             track.play()
-            main.postDelayed({ runCatching { track.stop(); track.release() } }, 600)
+            // Con su propio Handler: approach() limpia el principal y no debe dejar pitidos sin liberar.
+            beepHandler.postDelayed({ runCatching { track.stop(); track.release() } }, 600)
         }
     }
 

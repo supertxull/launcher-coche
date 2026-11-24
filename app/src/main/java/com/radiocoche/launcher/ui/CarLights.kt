@@ -58,6 +58,9 @@ object CarLights {
         private set
 
     private var started = false
+    private val takeBt = Runnable {
+        if (btPlaying == true && source != 8) runCatching { write3?.invoke(tw, 0x9E11, 192, 8) }
+    }
     private var tw: Any? = null // se guarda para que no se libere
     private var write2: java.lang.reflect.Method? = null
     private var write3: java.lang.reflect.Method? = null
@@ -105,11 +108,14 @@ object CarLights {
                     MSG_VOLUME -> if (m.arg2 in 1..100 && m.arg1 in 0..m.arg2) volume = m.arg1
                     MSG_SOURCE_NOW -> source = m.arg1 and 0x7F
                     MSG_NOW -> {
-                        val was = btPlaying == true
-                        btPlaying = m.arg1 == 8 && m.arg2 == 1
-                        // Play en el móvil: la unidad no cambia sola de fuente; se le pide el Bluetooth (fuente 8).
-                        if (btPlaying == true && !was && source != 8) {
-                            runCatching { write3?.invoke(tw, 0x9E11, 192, 8) }
+                        // Solo cuentan los mensajes del Bluetooth (arg1 = 8).
+                        if (m.arg1 == 8) {
+                            val was = btPlaying == true
+                            btPlaying = m.arg2 == 1
+                            // Play en el móvil: la unidad no cambia sola de fuente; se le pide el Bluetooth (fuente 8),
+                            // pero solo si sigue sonando 1,5 s después (no por un aviso suelto del móvil).
+                            main.removeCallbacks(takeBt)
+                            if (btPlaying == true && !was) main.postDelayed(takeBt, 1500)
                         }
                         if (m.arg1 == 8) {
                             val o = m.obj

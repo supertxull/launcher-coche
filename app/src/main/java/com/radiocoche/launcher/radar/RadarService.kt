@@ -57,6 +57,8 @@ class RadarService : Service() {
         // Conexión con el microcontrolador abierta desde ya (la usa el silencio de la radio).
         com.radiocoche.launcher.ui.CarLights.start(applicationContext)
         runner = AlertRunner(this)
+        // Si el servicio murió a mitad de un aviso o una llamada, se devuelve el sonido y el volumen.
+        handler.postDelayed({ runner.recover() }, 3000)
         engine = RadarEngine(runner)
         RadarStore.load(this)
         goForeground()

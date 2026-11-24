@@ -35,7 +35,6 @@ class HomeState(private val ctx: Context) {
     val music = MusicLink(ctx)
     val radio = RadioLink(ctx)
     val bt = BtLink(ctx)
-    private var lastSource: Int? = null
 
     /** Qué se ve en el panel derecho: lo último que se usó. */
     var source by mutableStateOf(
@@ -115,16 +114,6 @@ class HomeState(private val ctx: Context) {
         speed.tick()
         music.tick()
         bt.tick()
-        // El panel sigue a la fuente que suena de verdad (1 radio, 3 música, 8 Bluetooth).
-        val src = CarLights.source
-        if (src != lastSource) {
-            lastSource = src
-            when (src) {
-                1 -> select(Source.RADIO)
-                3 -> select(Source.MUSICA)
-                8 -> select(Source.BT)
-            }
-        }
         if (toast.isNotEmpty() && SystemClock.elapsedRealtime() > toastUntil) toast = ""
         if (RadarStore.message.isNotEmpty()) {
             showToast(RadarStore.message)

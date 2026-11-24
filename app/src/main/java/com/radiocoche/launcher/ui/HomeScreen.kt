@@ -458,7 +458,7 @@ private fun Dock(h: HomeState) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         DockButton(Ic.Radio, "Radio", active = h.source == Source.RADIO) { h.openRadio() }
-        DockButton(Ic.Note, "Música", active = h.source != Source.RADIO) { if (h.source == Source.BT) h.openBluetooth() else h.openMusic() }
+        DockButton(Ic.Note, "Música", active = h.source != Source.RADIO) { h.openMusic() }
         DockButton(Ic.Nav, "Navegador", onLongClick = { h.showNavChooser = true }) { h.openNavigator() }
         DockButton(Ic.Car, "Android Auto") { h.openAndroidAuto() }
         DockButton(Ic.Phone, "Teléfono") { h.openPhone() }
